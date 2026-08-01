@@ -1,0 +1,9 @@
+{% extends "base.html" %}
+
+{% block title %}Nie znaleziono — {{ config.BLOG_TITLE }}{% endblock %}
+
+{% block content %}
+  <h1>404 — nie znaleziono</h1>
+  <p>Strona, której szukasz, nie istnieje albo została usunięta.</p>
+  <p><a href="{{ url_for('public.index') }}">&larr; Wróć na stronę główną</a></p>
+{% endblock %}

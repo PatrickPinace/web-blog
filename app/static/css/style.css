@@ -31,6 +31,70 @@ a {
   color: var(--color-accent);
 }
 
+.post-list {
+  list-style: none;
+  padding: 0;
+}
+
+.post-list__item {
+  margin-bottom: 2rem;
+}
+
+.post-list__meta {
+  font-size: 0.875rem;
+  opacity: 0.7;
+}
+
+.pagination {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 2rem;
+}
+
+/* Treść wpisu (body_html, zsanityzowana bleachem — patrz post_detail.html) */
+.post-content blockquote {
+  border-left: 3px solid var(--color-accent);
+  margin-left: 0;
+  padding-left: 1rem;
+  opacity: 0.85;
+}
+
+.post-content img {
+  max-width: 100%;
+  height: auto;
+}
+
+/* Tabela nie może rozpychać strony na wąskim ekranie — plan, sekcja 8 */
+.post-content .table-wrapper {
+  overflow-x: auto;
+}
+
+.post-content table {
+  border-collapse: collapse;
+  width: 100%;
+}
+
+.post-content th,
+.post-content td {
+  border: 1px solid currentColor;
+  padding: 0.5rem 0.75rem;
+  text-align: left;
+}
+
+/* Wrapper embedu YouTube, generowany po stronie serwera — plan, sekcja 7 */
+.post-content .embed-responsive {
+  position: relative;
+  aspect-ratio: 16 / 9;
+}
+
+.post-content .embed-responsive iframe {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  border: 0;
+}
+
 /* Klasy generowane przez edytor Quill — patrz plan, sekcja 7 */
 .ql-align-center { text-align: center; }
 .ql-align-right { text-align: right; }

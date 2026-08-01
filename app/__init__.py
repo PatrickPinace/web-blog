@@ -28,8 +28,9 @@ def create_app(config_name=None):
     app.register_blueprint(public_bp)
     app.register_blueprint(admin_bp, url_prefix="/admin")
 
-    from app import cli
+    from app import cli, errors
 
     cli.register(app)
+    errors.register(app)
 
     return app

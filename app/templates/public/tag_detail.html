@@ -1,0 +1,9 @@
+{% extends "base.html" %}
+{% from "public/_post_list.html" import post_list %}
+
+{% block title %}#{{ tag.name }} — {{ config.BLOG_TITLE }}{% endblock %}
+
+{% block content %}
+  <h1>#{{ tag.name }}</h1>
+  {{ post_list(pagination, "public.tag_detail", {"slug": tag.slug}) }}
+{% endblock %}

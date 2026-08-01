@@ -1,0 +1,26 @@
+[tool.ruff]
+line-length = 88
+target-version = "py312"
+exclude = ["migrations", "venv", ".venv"]
+
+[tool.ruff.lint]
+select = [
+    "E",   # pycodestyle
+    "F",   # pyflakes
+    "I",   # isort
+    "B",   # flake8-bugbear
+    "S",   # flake8-bandit (bezpieczeństwo)
+    "UP",  # pyupgrade
+]
+ignore = [
+    "E501",  # długość linii pilnuje formatter
+]
+
+[tool.ruff.lint.per-file-ignores]
+# W testach asserty i twarde dane są w porządku
+"tests/**" = ["S101", "S105", "S106"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+python_files = ["test_*.py"]
+addopts = "-v --strict-markers"

@@ -60,11 +60,7 @@ cp .env.example .env
 python -c "import secrets; print(secrets.token_hex(32))"
 
 # 5. Baza danych — Postgres w kontenerze
-docker run -d --name blog-db \
-  -e POSTGRES_USER=blog \
-  -e POSTGRES_PASSWORD=blog \
-  -e POSTGRES_DB=blog \
-  -p 5432:5432 postgres:16
+docker compose up -d db
 
 # 6. Migracje i konto administratora
 flask db upgrade

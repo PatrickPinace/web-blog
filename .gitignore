@@ -41,6 +41,19 @@ htmlcov/
 *.sqlite
 *.sqlite3
 
+# Node (jeśli w etapie 4a dojdzie bundler do JS edytora)
+node_modules/
+npm-debug.log*
+
+# Uploady tymczasowe przed wysłaniem na Cloudinary (etap 4a)
+/uploads/
+/tmp_uploads/
+
+# CLI hostingów (etap 6 — Koyeb/Fly/Render mogą zostawiać lokalną konfigurację)
+.koyeb/
+.fly/
+fly.toml.bak
+
 # IDE
 .vscode/
 .idea/

@@ -4,5 +4,16 @@
 
 {% block content %}
   <h1>Panel administracyjny</h1>
-  <p><em>Formularz logowania pojawi się w etapie 4.</em></p>
+  <form method="post" novalidate>
+    {{ form.hidden_tag() }}
+    <p>
+      {{ form.username.label }}<br>
+      {{ form.username(size=32, autofocus=true) }}
+    </p>
+    <p>
+      {{ form.password.label }}<br>
+      {{ form.password(size=32) }}
+    </p>
+    <button type="submit">Zaloguj</button>
+  </form>
 {% endblock %}

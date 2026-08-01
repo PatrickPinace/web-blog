@@ -11,6 +11,11 @@
     <a href="{{ url_for('public.index') }}"><strong>{{ config.BLOG_TITLE }}</strong></a>
   </header>
   <main>
+    {% with messages = get_flashed_messages(with_categories=true) %}
+      {% for category, message in messages %}
+        <p class="flash flash--{{ 'error' if category == 'error' else 'success' }}">{{ message }}</p>
+      {% endfor %}
+    {% endwith %}
     {% block content %}{% endblock %}
   </main>
 </body>

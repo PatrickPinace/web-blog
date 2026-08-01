@@ -1,7 +1,7 @@
 from app.extensions import login_manager
+from app.models import User
 
 
 @login_manager.user_loader
 def load_user(user_id):
-    """Placeholder etapu 1 — podłączony do modelu User w etapie 2/4."""
-    return None
+    return User.query.get(int(user_id))

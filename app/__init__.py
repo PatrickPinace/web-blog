@@ -18,7 +18,10 @@ def create_app(config_name=None):
     login_manager.init_app(app)
     limiter.init_app(app)
 
-    from app import auth  # noqa: F401 — rejestruje login_manager.user_loader
+    from app import (
+        auth,  # noqa: F401 — rejestruje login_manager.user_loader
+        models,  # noqa: F401 — rejestruje tabele w metadata przed migracją
+    )
     from app.admin import admin_bp
     from app.public import public_bp
 

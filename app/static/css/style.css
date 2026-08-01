@@ -104,6 +104,17 @@ a {
   text-align: left;
 }
 
+/* Tabela z edytora nie ma własnego wrappera, a nie może rozpychać strony
+   na wąskim ekranie — `display: block` na samej tabeli daje jej scroll
+   poziomy bez potrzeby dokładania kontenera przy sanityzacji. */
+@media (max-width: 640px) {
+  .post-content table {
+    display: block;
+    overflow-x: auto;
+    white-space: nowrap;
+  }
+}
+
 /* Wrapper embedu YouTube, generowany po stronie serwera — plan, sekcja 7 */
 .post-content .embed-responsive {
   position: relative;
@@ -116,6 +127,24 @@ a {
   width: 100%;
   height: 100%;
   border: 0;
+}
+
+.editor-actions {
+  display: inline-flex;
+  gap: 0.5rem;
+  margin-bottom: 0.5rem;
+}
+
+.button-like {
+  display: inline-block;
+  padding: 0.25rem 0.75rem;
+  border: 1px solid currentColor;
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+#editor-root {
+  min-height: 320px;
 }
 
 /* Klasy generowane przez edytor Quill — patrz plan, sekcja 7 */

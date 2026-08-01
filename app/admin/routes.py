@@ -1,14 +1,16 @@
 from argon2 import PasswordHasher
 from argon2.exceptions import VerifyMismatchError
-from flask import abort, flash, redirect, render_template, request, url_for
+from flask import abort, flash, jsonify, redirect, render_template, request, url_for
 from flask_login import current_user, login_required, login_user, logout_user
 
 from app.admin import admin_bp
 from app.admin.forms import DeletePostForm, LoginForm, PostForm
 from app.extensions import db, limiter
-from app.models import Post, Tag, User
+from app.models import Image, Post, Tag, User
+from app.utils.embeds import build_youtube_placeholder
 from app.utils.sanitize import SANITIZER_VERSION, sanitize_html
 from app.utils.slugify import slugify, unique_slug
+from app.utils.uploads import UploadError, is_allowed_image_url, upload_image
 
 _hasher = PasswordHasher()
 
@@ -109,6 +111,43 @@ def post_delete(post_id):
     db.session.commit()
     flash("Wpis usunięty.", "success")
     return redirect(url_for("admin.dashboard"))
+
+
+@admin_bp.route("/upload-image", methods=["POST"])
+@login_required
+@limiter.limit("30 per hour")
+def upload_image_endpoint():
+    """Przyjmuje plik z panelu i odsyła URL z Cloudinary do wstawienia w treść."""
+    try:
+        public_id, url = upload_image(request.files.get("file"))
+    except UploadError as exc:
+        return jsonify({"error": str(exc)}), 400
+
+    db.session.add(Image(cloudinary_public_id=public_id, url=url))
+    db.session.commit()
+    return jsonify({"url": url})
+
+
+@admin_bp.route("/embed-youtube", methods=["POST"])
+@login_required
+def embed_youtube_endpoint():
+    """Zamienia URL filmu na placeholder embedu (iframe powstaje przy renderze)."""
+    html = build_youtube_placeholder((request.form or {}).get("url", ""))
+    if html is None:
+        return jsonify({"error": "To nie jest prawidłowy adres filmu na YouTube."}), 400
+    return jsonify({"html": html})
+
+
+@admin_bp.route("/check-image-url", methods=["POST"])
+@login_required
+def check_image_url_endpoint():
+    """Weryfikuje, że wklejony URL obrazka pochodzi z dozwolonej domeny."""
+    url = (request.form or {}).get("url", "").strip()
+    if not is_allowed_image_url(url):
+        return jsonify(
+            {"error": "Dozwolone są tylko obrazki z zaufanych domen (np. Cloudinary)."}
+        ), 400
+    return jsonify({"url": url})
 
 
 def _apply_form_to_post(form, post, is_new):

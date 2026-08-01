@@ -5,6 +5,7 @@ from argon2 import PasswordHasher
 
 from app.extensions import db
 from app.models import Post, Tag, User
+from app.utils.sanitize import SANITIZER_VERSION, sanitize_html
 from app.utils.slugify import slugify, unique_slug
 
 _hasher = PasswordHasher()
@@ -13,6 +14,7 @@ _hasher = PasswordHasher()
 def register(app):
     app.cli.add_command(create_admin)
     app.cli.add_command(seed)
+    app.cli.add_command(resanitize)
 
 
 @click.command("create-admin")
@@ -80,3 +82,36 @@ def seed():
 
     db.session.commit()
     click.echo(f"Dodano {len(sample_posts)} wpisów przykładowych.")
+
+
+@click.command("resanitize")
+@click.option("--force", is_flag=True, help="Przelicz też wpisy z aktualną wersją.")
+def resanitize(force):
+    """Przelicza body_html z body_source po zmianie reguł sanitizera.
+
+    OBOWIĄZKOWE po każdej zmianie whitelisty w app/utils/sanitize.py —
+    zapisany body_html zamraża reguły z momentu zapisu, więc bez tego
+    załatana dziura zostaje w starych wpisach (plan, sekcja 7).
+    """
+    query = Post.query
+    if not force:
+        query = query.filter(Post.sanitizer_version != SANITIZER_VERSION)
+
+    posts = query.all()
+    if not posts:
+        click.echo("Wszystkie wpisy są aktualne.")
+        return
+
+    changed = 0
+    for post in posts:
+        new_html = sanitize_html(post.body_source)
+        if new_html != post.body_html:
+            post.body_html = new_html
+            changed += 1
+        post.sanitizer_version = SANITIZER_VERSION
+
+    db.session.commit()
+    click.echo(
+        f"Przetworzono {len(posts)} wpisów (wersja -> {SANITIZER_VERSION}), "
+        f"treść zmieniona w {changed}."
+    )

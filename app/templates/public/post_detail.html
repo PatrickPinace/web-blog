@@ -21,10 +21,11 @@
       {% endif %}
     </p>
 
-    {# body_html jest zsanityzowany przez bleach przy zapisie (etap 4a) —
-       to JEDYNE miejsce w całym projekcie, gdzie wolno użyć `| safe`.
+    {# body_html jest zsanityzowany przez bleach przy zapisie, a render_embeds
+       zamienia placeholdery na zaufane iframe'y tuż przed wyświetleniem.
+       To JEDYNE miejsce w całym projekcie, gdzie wolno użyć `| safe`.
        Nigdy na body_source ani na żadnym innym polu. #}
-    <div class="post-content">{{ post.body_html | safe }}</div>
+    <div class="post-content">{{ post.body_html | render_embeds | safe }}</div>
   </article>
 
   <p><a href="{{ url_for('public.index') }}">&larr; Wszystkie wpisy</a></p>

@@ -28,9 +28,18 @@ def create_app(config_name=None):
     app.register_blueprint(public_bp)
     app.register_blueprint(admin_bp, url_prefix="/admin")
 
-    from app import cli, errors
+    from app import cli, errors, security
+    from app.utils import uploads
+    from app.utils.embeds import render_embeds
 
     cli.register(app)
     errors.register(app)
+    uploads.configure(app)
+    if not app.config.get("TESTING"):
+        security.register(app)
+
+    # Zamienia placeholdery embedów na iframe'y dopiero przy wyświetlaniu —
+    # w bazie nigdy nie leży osadzony kod ramki (app/utils/embeds.py).
+    app.jinja_env.filters["render_embeds"] = render_embeds
 
     return app

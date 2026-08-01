@@ -2,6 +2,10 @@
 
 {% block title %}{{ 'Edytuj wpis' if post else 'Nowy wpis' }} — {{ config.BLOG_TITLE }}{% endblock %}
 
+{% block head %}
+  <link rel="stylesheet" href="{{ url_for('static', filename='vendor/quill/quill.snow.css') }}">
+{% endblock %}
+
 {% block content %}
   <h1>{{ 'Edytuj wpis' if post else 'Nowy wpis' }}</h1>
 
@@ -34,15 +38,32 @@
     </p>
 
     <p>
-      <label for="body_editor">Treść</label><br>
-      {# Etap 4: zwykły textarea, zapisujący do ukrytego pola body_source.
-         Edytor Quill (WYSIWYG) podłączamy w etapie 4a. #}
-      <textarea id="body_editor" rows="15" cols="70"
-                oninput="document.getElementById('{{ form.body_source.id }}').value = this.value"
-      >{{ post.body_source if post else '' }}</textarea>
+      <label>Treść</label><br>
+      <span class="editor-actions">
+        <label class="button-like" for="image-upload">Wstaw obrazek (plik)</label>
+        <input type="file" id="image-upload" accept="image/*" hidden
+               data-endpoint="{{ url_for('admin.upload_image_endpoint') }}">
+        <button type="button" id="image-by-url"
+                data-endpoint="{{ url_for('admin.check_image_url_endpoint') }}">Obrazek z URL</button>
+        <button type="button" id="embed-youtube"
+                data-endpoint="{{ url_for('admin.embed_youtube_endpoint') }}">Wstaw film YouTube</button>
+      </span>
+
+      {# Treść startowa przekazywana przez wartość pola, nie przez wstrzyknięcie
+         do HTML — dzięki temu autoescaping Jinja2 zostaje aktywny. #}
+      <input type="hidden" id="initial-content" value="{{ post.body_source if post else '' }}">
+
+      <div id="editor-root"
+           data-target-field="{{ form.body_source.id }}"
+           data-csrf-token="{{ csrf_token() }}"></div>
       {{ form.body_source() }}
     </p>
 
     <button type="submit">Zapisz</button>
   </form>
+{% endblock %}
+
+{% block scripts %}
+  <script src="{{ url_for('static', filename='vendor/quill/quill.js') }}"></script>
+  <script src="{{ url_for('static', filename='js/admin-editor.js') }}"></script>
 {% endblock %}

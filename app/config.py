@@ -13,6 +13,14 @@ class Config:
     CLOUDINARY_API_KEY = os.environ.get("CLOUDINARY_API_KEY")
     CLOUDINARY_API_SECRET = os.environ.get("CLOUDINARY_API_SECRET")
 
+    # Domeny, z których wolno wstawić obrazek przez URL. Serwer nigdy nie
+    # pobiera tych zasobów — adres trafia wprost do `img src`.
+    ALLOWED_IMAGE_HOSTS = tuple(
+        h.strip()
+        for h in os.environ.get("ALLOWED_IMAGE_HOSTS", "res.cloudinary.com").split(",")
+        if h.strip()
+    )
+
     BLOG_TITLE = os.environ.get("BLOG_TITLE", "Blog")
     BLOG_DESCRIPTION = os.environ.get("BLOG_DESCRIPTION", "")
     BLOG_AUTHOR = os.environ.get("BLOG_AUTHOR", "")

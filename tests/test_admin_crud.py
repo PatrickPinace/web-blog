@@ -1,6 +1,6 @@
 from datetime import timedelta
 
-from app.models import Post, utcnow
+from app.models import Post, PostActivity, utcnow
 
 
 class TestLogin:
@@ -722,6 +722,42 @@ class TestScheduledPublishing:
         )
         assert Post.query.filter_by(title="Bez daty").first() is None
 
+    def test_scheduled_status_with_empty_date_field_is_rejected(self, auth_client, db):
+        # Prawdziwa przeglądarka wysyła pusty <input type=datetime-local>
+        # jako pusty string OBECNY w danych formularza, nie pomija klucza
+        # (w odróżnieniu od testu bez klucza wyżej) — to inny przypadek
+        # w WTForms i kiedyś się rozjeżdżał (patrz komentarz przy
+        # validate_scheduled_for w app/admin/forms.py).
+        response = auth_client.post(
+            "/admin/post/new",
+            data={
+                "title": "Pusty string daty", "excerpt": "e", "tags": "",
+                "status": "scheduled", "scheduled_for": "",
+                "body_source": "<p>x</p>",
+            },
+        )
+        assert response.status_code == 200
+        assert Post.query.filter_by(title="Pusty string daty").first() is None
+
+    def test_draft_with_leftover_schedule_date_is_saved(self, auth_client, db):
+        # User wybrał "Zaplanowany", wpisał datę, rozmyślił się i wrócił do
+        # "Szkic" — JS tylko chowa pole, nie czyści wartości. Status draft
+        # musi wygrać: reszta danych w polu daty jest wtedy nieistotna.
+        future = utcnow() + timedelta(days=1)
+        response = auth_client.post(
+            "/admin/post/new",
+            data={
+                "title": "Draft z resztka daty", "excerpt": "e", "tags": "",
+                "status": "draft", "scheduled_for": self._datetime_local(future),
+                "body_source": "<p>x</p>",
+            },
+        )
+        assert response.status_code == 302
+        post = Post.query.filter_by(title="Draft z resztka daty").first()
+        assert post is not None
+        assert post.status == Post.STATUS_DRAFT
+        assert post.scheduled_for is None
+
     def test_scheduled_date_in_the_past_is_rejected(self, auth_client, db):
         past = utcnow() - timedelta(days=1)
         auth_client.post(
@@ -848,3 +884,179 @@ class TestScheduledPublishing:
 
         filtered = auth_client.get("/admin/?status=scheduled")
         assert b"Widoczny w filtrze" in filtered.data
+
+
+class TestPostActivityLog:
+    def test_creating_post_logs_created_action(self, auth_client, db, admin):
+        auth_client.post(
+            "/admin/post/new",
+            data={
+                "title": "Logowany", "excerpt": "e", "tags": "",
+                "status": "draft", "body_source": "<p>x</p>",
+            },
+        )
+        post = Post.query.filter_by(title="Logowany").first()
+        entries = PostActivity.query.filter_by(post_id=post.id).all()
+        assert len(entries) == 1
+        assert entries[0].action == PostActivity.ACTION_CREATED
+        assert entries[0].user_id == admin.id
+
+    def test_editing_title_logs_updated_with_changed_field(self, auth_client, db, admin):
+        post = Post(
+            title="Stary tytul", slug="stary-tytul", body_source="<p>x</p>",
+            body_html="<p>x</p>", author_id=admin.id,
+        )
+        db.session.add(post)
+        db.session.commit()
+
+        auth_client.post(
+            f"/admin/post/{post.id}/edit",
+            data={
+                "title": "Nowy tytul", "excerpt": "e", "tags": "",
+                "status": "draft", "body_source": "<p>x</p>",
+            },
+        )
+        entry = (
+            PostActivity.query.filter_by(post_id=post.id, action=PostActivity.ACTION_UPDATED)
+            .first()
+        )
+        assert entry is not None
+        assert "title" in entry.changed_fields
+
+    def test_editing_without_changes_does_not_log_updated(self, auth_client, db, admin):
+        post = Post(
+            title="Bez zmian", slug="bez-zmian", body_source="<p>x</p>",
+            body_html="<p>x</p>", excerpt="e", author_id=admin.id,
+        )
+        db.session.add(post)
+        db.session.commit()
+
+        auth_client.post(
+            f"/admin/post/{post.id}/edit",
+            data={
+                "title": "Bez zmian", "excerpt": "e", "tags": "",
+                "status": "draft", "body_source": "<p>x</p>",
+            },
+        )
+        updated_entries = PostActivity.query.filter_by(
+            post_id=post.id, action=PostActivity.ACTION_UPDATED
+        ).all()
+        assert updated_entries == []
+
+    def test_publishing_logs_published_action(self, auth_client, db, admin):
+        post = Post(
+            title="Do publikacji", slug="do-publikacji", body_source="<p>x</p>",
+            body_html="<p>x</p>", author_id=admin.id,
+        )
+        db.session.add(post)
+        db.session.commit()
+
+        auth_client.post(
+            f"/admin/post/{post.id}/edit",
+            data={
+                "title": "Do publikacji", "excerpt": "e", "tags": "",
+                "status": "published", "body_source": "<p>x</p>",
+            },
+        )
+        entry = (
+            PostActivity.query.filter_by(post_id=post.id, action=PostActivity.ACTION_PUBLISHED)
+            .first()
+        )
+        assert entry is not None
+
+    def test_toggle_status_logs_action(self, auth_client, db, admin):
+        post = Post(
+            title="Toggle log", slug="toggle-log", body_source="<p>x</p>",
+            body_html="<p>x</p>", author_id=admin.id,
+        )
+        db.session.add(post)
+        db.session.commit()
+
+        auth_client.post(f"/admin/post/{post.id}/toggle-status")
+        entry = PostActivity.query.filter_by(post_id=post.id).order_by(
+            PostActivity.id.desc()
+        ).first()
+        assert entry.action == PostActivity.ACTION_PUBLISHED
+        assert entry.user_id == admin.id
+
+    def test_delete_and_restore_are_logged(self, auth_client, db, admin):
+        post = Post(
+            title="Kasuj i wroc", slug="kasuj-i-wroc", body_source="<p>x</p>",
+            body_html="<p>x</p>", author_id=admin.id,
+        )
+        db.session.add(post)
+        db.session.commit()
+
+        auth_client.post(f"/admin/post/{post.id}/delete")
+        auth_client.post(f"/admin/post/{post.id}/restore")
+
+        actions = [
+            e.action
+            for e in PostActivity.query.filter_by(post_id=post.id)
+            .order_by(PostActivity.id)
+            .all()
+        ]
+        assert PostActivity.ACTION_DELETED in actions
+        assert PostActivity.ACTION_RESTORED in actions
+
+    def test_duplicate_logs_created_and_duplicated(self, auth_client, db, admin):
+        original = Post(
+            title="Oryginal do logu", slug="oryginal-do-logu", body_source="<p>x</p>",
+            body_html="<p>x</p>", author_id=admin.id,
+        )
+        db.session.add(original)
+        db.session.commit()
+
+        auth_client.post(f"/admin/post/{original.id}/duplicate")
+        copy = Post.query.filter_by(title="Oryginal do logu (kopia)").first()
+        actions = [
+            e.action
+            for e in PostActivity.query.filter_by(post_id=copy.id).order_by(PostActivity.id).all()
+        ]
+        assert actions == [PostActivity.ACTION_CREATED, PostActivity.ACTION_DUPLICATED]
+
+    def test_scheduled_promotion_logs_system_publish(self, client, db, admin):
+        past = utcnow() - timedelta(minutes=5)
+        post = Post(
+            title="Auto log", slug="auto-log", body_source="<p>x</p>",
+            body_html="<p>x</p>", author_id=admin.id,
+        )
+        post.schedule(past)
+        db.session.add(post)
+        db.session.commit()
+
+        client.get("/")
+
+        entry = PostActivity.query.filter_by(
+            post_id=post.id, action=PostActivity.ACTION_PUBLISHED
+        ).first()
+        assert entry is not None
+        assert entry.user_id is None
+
+    def test_history_page_shows_entries(self, auth_client, db, admin):
+        post = Post(
+            title="Widoczna historia", slug="widoczna-historia", body_source="<p>x</p>",
+            body_html="<p>x</p>", author_id=admin.id,
+        )
+        db.session.add(post)
+        db.session.commit()
+        auth_client.post(f"/admin/post/{post.id}/toggle-status")
+
+        response = auth_client.get(f"/admin/post/{post.id}/historia")
+        assert response.status_code == 200
+        assert b"Opublikowano" in response.data
+        assert b"admin" in response.data
+
+    def test_purging_post_deletes_its_activity_log(self, auth_client, db, admin):
+        post = Post(
+            title="Usuwam z logiem", slug="usuwam-z-logiem", body_source="<p>x</p>",
+            body_html="<p>x</p>", author_id=admin.id,
+        )
+        db.session.add(post)
+        db.session.commit()
+        post_id = post.id
+
+        auth_client.post(f"/admin/post/{post_id}/delete")
+        auth_client.post(f"/admin/post/{post_id}/purge")
+
+        assert PostActivity.query.filter_by(post_id=post_id).count() == 0

@@ -1,7 +1,7 @@
 from sqlalchemy import func
 
 from app.extensions import db
-from app.models import Post, Tag, post_tags, utcnow
+from app.models import Post, PostActivity, Tag, post_tags, utcnow
 
 POSTS_PER_PAGE = 10
 
@@ -29,6 +29,12 @@ def promote_scheduled_posts():
         return
     for post in due:
         post.publish()
+        # user_id=None: to sam system publikuje po upływie terminu, nie
+        # zalogowany admin — nie ma tu żadnego request.user do przypisania
+        # (funkcja jest wołana z anonimowych, publicznych żądań czytelników).
+        db.session.add(
+            PostActivity(post_id=post.id, action=PostActivity.ACTION_PUBLISHED)
+        )
     db.session.commit()
 
 

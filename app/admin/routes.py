@@ -20,7 +20,7 @@ from app.admin.forms import (
     RenameTagForm,
 )
 from app.extensions import db, limiter
-from app.models import Image, Label, Post, Tag, User, post_tags, utcnow
+from app.models import Image, Label, Post, PostActivity, Tag, User, post_tags, utcnow
 from app.public.queries import promote_scheduled_posts
 from app.public.routes import render_post_body
 from app.utils.embeds import build_youtube_placeholder
@@ -165,9 +165,23 @@ def post_duplicate(post_id):
         labels=list(original.labels),
     )
     db.session.add(copy)
+    db.session.flush()
+    _log_activity(copy, PostActivity.ACTION_CREATED)
+    _log_activity(copy, PostActivity.ACTION_DUPLICATED)
     db.session.commit()
     flash("Wpis zduplikowany jako szkic.", "success")
     return redirect(url_for("admin.post_edit", post_id=copy.id))
+
+
+def _log_activity(post, action, changed_fields=None):
+    db.session.add(
+        PostActivity(
+            post_id=post.id,
+            user_id=current_user.id,
+            action=action,
+            changed_fields=",".join(changed_fields) if changed_fields else None,
+        )
+    )
 
 
 def _label_choices():
@@ -240,6 +254,20 @@ def _safe_admin_redirect(target):
     return url_for("admin.dashboard")
 
 
+@admin_bp.route("/post/<int:post_id>/historia")
+@login_required
+def post_history(post_id):
+    # Bez filtra po deleted_at — historia obejmuje też wpisy w koszu,
+    # żeby dało się zobaczyć kto i kiedy usunął dany wpis.
+    post = Post.query.get_or_404(post_id)
+    activity = (
+        PostActivity.query.filter_by(post_id=post.id)
+        .order_by(PostActivity.created_at.desc())
+        .all()
+    )
+    return render_template("admin/post_history.html", post=post, activity=activity)
+
+
 @admin_bp.route("/post/<int:post_id>/preview")
 @login_required
 def post_preview(post_id):
@@ -266,6 +294,7 @@ def post_delete(post_id):
         abort(400)
     post = Post.query.filter(Post.deleted_at.is_(None), Post.id == post_id).first_or_404()
     post.soft_delete()
+    _log_activity(post, PostActivity.ACTION_DELETED)
     db.session.commit()
     flash("Wpis przeniesiony do kosza.", "success")
     return redirect(url_for("admin.dashboard"))
@@ -295,6 +324,7 @@ def post_restore(post_id):
         abort(400)
     post = Post.query.filter(Post.deleted_at.isnot(None), Post.id == post_id).first_or_404()
     post.restore()
+    _log_activity(post, PostActivity.ACTION_RESTORED)
     db.session.commit()
     flash("Wpis przywrócony jako szkic.", "success")
     return redirect(url_for("admin.trash"))
@@ -324,15 +354,18 @@ def post_toggle_status(post_id):
     post = Post.query.filter(Post.deleted_at.is_(None), Post.id == post_id).first_or_404()
     if post.is_published:
         post.unpublish()
+        _log_activity(post, PostActivity.ACTION_UNPUBLISHED)
         flash("Wpis wrócił do szkiców.", "success")
     elif post.status == Post.STATUS_SCHEDULED:
         # Szybki przełącznik z dashboardu jest binarny — planowanie z wyborem
         # daty żyje tylko w formularzu edycji. Kliknięcie tutaj na zaplanowanym
         # wpisie anuluje harmonogram i publikuje od razu, zamiast go ignorować.
         post.publish()
+        _log_activity(post, PostActivity.ACTION_PUBLISHED)
         flash("Wpis opublikowany od razu, harmonogram anulowany.", "success")
     else:
         post.publish()
+        _log_activity(post, PostActivity.ACTION_PUBLISHED)
         flash("Wpis opublikowany.", "success")
     db.session.commit()
     return redirect(_safe_admin_redirect(request.referrer))
@@ -531,18 +564,32 @@ def check_image_url_endpoint():
 
 def _apply_form_to_post(form, post, is_new):
     was_published = post.status == Post.STATUS_PUBLISHED
+    was_status = post.status
     title_changed = is_new or post.title != form.title.data
 
+    new_tags = _resolve_tags(form.tags.data)
+    new_labels = Label.query.filter(Label.id.in_(form.labels.data or [])).all()
+    new_excerpt = form.excerpt.data
+    new_kind = form.kind.data
+    new_branch = (form.branch.data or "").strip() or None
+    new_is_concept = bool(form.is_concept.data)
+    new_body_source = form.body_source.data or ""
+
+    changed_fields = [] if is_new else _diff_fields(
+        post, new_tags, new_labels, new_excerpt, new_kind, new_branch,
+        new_is_concept, new_body_source, title_changed,
+    )
+
     post.title = form.title.data
-    post.excerpt = form.excerpt.data
-    post.kind = form.kind.data
-    post.branch = (form.branch.data or "").strip() or None
-    post.is_concept = bool(form.is_concept.data)
-    post.labels = Label.query.filter(Label.id.in_(form.labels.data or [])).all()
+    post.excerpt = new_excerpt
+    post.kind = new_kind
+    post.branch = new_branch
+    post.is_concept = new_is_concept
+    post.labels = new_labels
 
     # Kolejność zapisu jest obowiązkowa (plan, sekcja 5): body_source
     # najpierw bez zmian, potem body_html = sanitize(body_source).
-    post.body_source = form.body_source.data or ""
+    post.body_source = new_body_source
     post.body_html = sanitize_html(post.body_source)
     post.sanitizer_version = SANITIZER_VERSION
 
@@ -556,7 +603,7 @@ def _apply_form_to_post(form, post, is_new):
             is not None,
         )
 
-    post.tags = _resolve_tags(form.tags.data)
+    post.tags = new_tags
 
     new_status = form.status.data
     if new_status == Post.STATUS_SCHEDULED:
@@ -569,6 +616,43 @@ def _apply_form_to_post(form, post, is_new):
             post.publish()
     else:
         post.unpublish()
+
+    if is_new:
+        _log_activity(post, PostActivity.ACTION_CREATED)
+    else:
+        if changed_fields:
+            _log_activity(post, PostActivity.ACTION_UPDATED, changed_fields)
+        if post.status != was_status:
+            action = {
+                Post.STATUS_PUBLISHED: PostActivity.ACTION_PUBLISHED,
+                Post.STATUS_SCHEDULED: PostActivity.ACTION_SCHEDULED,
+                Post.STATUS_DRAFT: PostActivity.ACTION_UNPUBLISHED,
+            }[post.status]
+            _log_activity(post, action)
+
+
+def _diff_fields(
+    post, new_tags, new_labels, new_excerpt, new_kind, new_branch,
+    new_is_concept, new_body_source, title_changed,
+):
+    changed = []
+    if title_changed:
+        changed.append("title")
+    if post.excerpt != new_excerpt:
+        changed.append("excerpt")
+    if post.kind != new_kind:
+        changed.append("kind")
+    if post.branch != new_branch:
+        changed.append("branch")
+    if post.is_concept != new_is_concept:
+        changed.append("is_concept")
+    if post.body_source != new_body_source:
+        changed.append("body_source")
+    if {t.id for t in post.tags} != {t.id for t in new_tags}:
+        changed.append("tags")
+    if {label.id for label in post.labels} != {label.id for label in new_labels}:
+        changed.append("labels")
+    return changed
 
 
 def _resolve_tags(raw_tags):

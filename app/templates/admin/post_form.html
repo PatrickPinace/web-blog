@@ -24,6 +24,7 @@
       <a href="{{ url_for('admin.dashboard') }}">&larr; Panel</a>
       {% if post %}
         <a href="{{ url_for('admin.post_preview', post_id=post.id) }}">Podgląd</a>
+        <a href="{{ url_for('admin.post_history', post_id=post.id) }}">Historia zmian</a>
       {% endif %}
     </div>
 

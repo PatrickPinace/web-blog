@@ -109,6 +109,12 @@ class Post(db.Model):
     images = db.relationship(
         "Image", back_populates="post", cascade="all, delete-orphan"
     )
+    activity = db.relationship(
+        "PostActivity",
+        back_populates="post",
+        cascade="all, delete-orphan",
+        order_by="PostActivity.created_at.desc()",
+    )
 
     @property
     def is_published(self):
@@ -149,6 +155,41 @@ class Post(db.Model):
 
     def __repr__(self):
         return f"<Post {self.slug!r} ({self.status})>"
+
+
+class PostActivity(db.Model):
+    """Lekki log historii: kto/kiedy/co zrobił z wpisem, bez treści.
+
+    Świadomie nie jest to wersjonowanie (brak zapisanych wartości pól,
+    tylko ich nazwy) — to prostsza, tańsza odpowiedź na "coś tu ostatnio
+    zmieniłem, ale co". Pełne wersjonowanie zostaje w planach jako osobna,
+    większa funkcja, sensowna dopiero jeśli to okaże się niewystarczające.
+    """
+
+    ACTION_CREATED = "created"
+    ACTION_UPDATED = "updated"
+    ACTION_PUBLISHED = "published"
+    ACTION_UNPUBLISHED = "unpublished"
+    ACTION_SCHEDULED = "scheduled"
+    ACTION_DELETED = "deleted"
+    ACTION_RESTORED = "restored"
+    ACTION_DUPLICATED = "duplicated"
+
+    id = db.Column(db.Integer, primary_key=True)
+    post_id = db.Column(db.Integer, db.ForeignKey("post.id"), nullable=False, index=True)
+    user_id = db.Column(db.Integer, db.ForeignKey("user.id"), nullable=True)
+    action = db.Column(db.String(20), nullable=False)
+    # Nazwy zmienionych pól oddzielone przecinkiem (np. "title,body_source"),
+    # nie ich wartości — patrz docstring klasy. Puste dla akcji bez pól
+    # (usunięto/przywrócono/zduplikowano).
+    changed_fields = db.Column(db.String(300), nullable=True)
+    created_at = db.Column(db.DateTime(timezone=True), default=utcnow, nullable=False)
+
+    post = db.relationship("Post", back_populates="activity")
+    user = db.relationship("User")
+
+    def __repr__(self):
+        return f"<PostActivity post_id={self.post_id} {self.action!r}>"
 
 
 class Tag(db.Model):

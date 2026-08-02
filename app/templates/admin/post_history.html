@@ -1,0 +1,67 @@
+{% extends "base.html" %}
+
+{% block title %}Historia — {{ post.title }} — {{ config.BLOG_TITLE }}{% endblock %}
+{% block body_class %}is-admin{% endblock %}
+
+{% set action_labels = {
+  'created': 'Utworzono',
+  'updated': 'Zapisano zmiany',
+  'published': 'Opublikowano',
+  'unpublished': 'Cofnięto do szkiców',
+  'scheduled': 'Zaplanowano publikację',
+  'deleted': 'Przeniesiono do kosza',
+  'restored': 'Przywrócono z kosza',
+  'duplicated': 'Utworzono jako duplikat',
+} %}
+{% set field_labels = {
+  'title': 'tytuł',
+  'excerpt': 'krótki opis',
+  'kind': 'typ wpisu',
+  'branch': 'branża',
+  'is_concept': 'flaga koncepcyjny',
+  'body_source': 'treść',
+  'tags': 'tagi',
+  'labels': 'znaczki',
+} %}
+
+{% block content %}
+<main class="wrap">
+  <div class="admin admin--wide">
+    <div class="toolbar">
+      <a href="{{ url_for('admin.post_edit', post_id=post.id) }}">&larr; {{ post.title }}</a>
+    </div>
+
+    <h1>Historia zmian</h1>
+    <p class="subtitle">Kto i kiedy edytował ten wpis — bez treści zmian,
+      tylko akcje i nazwy pól, które się zmieniły.</p>
+
+    {% if activity %}
+      <table>
+        <thead>
+          <tr><th>Kiedy</th><th>Kto</th><th>Akcja</th><th>Zmienione pola</th></tr>
+        </thead>
+        <tbody>
+          {% for entry in activity %}
+            <tr>
+              <td class="admin-date">{{ entry.created_at.strftime('%d.%m.%Y %H:%M') }}</td>
+              <td>{{ entry.user.username if entry.user else 'system (harmonogram)' }}</td>
+              <td>{{ action_labels.get(entry.action, entry.action) }}</td>
+              <td>
+                {% if entry.changed_fields %}
+                  {%- for field in entry.changed_fields.split(',') -%}
+                    {{ field_labels.get(field, field) }}{{ ', ' if not loop.last }}
+                  {%- endfor -%}
+                {% else %}
+                  <span class="hint">—</span>
+                {% endif %}
+              </td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    {% else %}
+      <p><em>Brak zarejestrowanych zmian.</em></p>
+    {% endif %}
+  </div>
+</main>
+{% endblock %}

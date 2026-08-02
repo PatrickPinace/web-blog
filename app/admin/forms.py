@@ -52,7 +52,10 @@ class PostForm(FlaskForm):
     # Bez Optional(): ten validator rzuca StopValidation na pustym polu,
     # co ucinałoby validate_scheduled_for poniżej zanim zdąży sprawdzić,
     # że status=scheduled bez daty jest błędem. Puste pole samo w sobie
-    # nie jest błędem — to właśnie decyduje validate_scheduled_for.
+    # nie jest błędem — to właśnie decyduje validate_scheduled_for. Ale bez
+    # żadnego walidatora, DateTimeLocalField na pustym stringu (przeglądarka
+    # WYSYŁA pusty <input type=datetime-local>, nie pomija go) wpisuje sam
+    # sobie błąd konwersji "Not a valid datetime value." — czyszczony niżej.
     scheduled_for = DateTimeLocalField(
         "Data i godzina publikacji", format="%Y-%m-%dT%H:%M", validators=[]
     )
@@ -66,8 +69,20 @@ class PostForm(FlaskForm):
 
     def validate_scheduled_for(self, field):
         if self.status.data != Post.STATUS_SCHEDULED:
+            # Data w polu jest nieistotna przy każdym innym statusie — w tym
+            # przypadku, gdy user wpisał/wybrał datę, potem zmienił zdanie
+            # i przełączył status z powrotem (JS tylko chowa pole, nie czyści
+            # go), więc puste ALBO błędne info tutaj nie może zablokować
+            # zapisu. Błąd konwersji z pustego <input> (przeglądarka wysyła
+            # pusty string, nie pomija pola) czyścimy z tego samego powodu.
+            field.errors[:] = []
+            field.data = None
             return
+        if not field.raw_data or not field.raw_data[0].strip():
+            field.errors[:] = []
+            field.data = None
         if field.data is None:
+            field.errors[:] = []
             raise ValidationError("Podaj datę i godzinę publikacji.")
         # DateTimeLocalField zwraca naiwny datetime (bez strefy) — pole
         # w formularzu to czas lokalny przeglądarki, traktowany jako UTC

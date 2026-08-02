@@ -33,6 +33,7 @@ class TestAdminRequiresLogin:
             "/admin/post/new",
             "/admin/post/1/edit",
             "/admin/post/1/preview",
+            "/admin/post/1/historia",
             "/admin/labels",
             "/admin/tags",
             "/admin/kosz",

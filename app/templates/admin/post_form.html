@@ -53,7 +53,16 @@
           zleceniem — wpis dostanie widoczną etykietę „Projekt koncepcyjny”.</p>
       </div>
 
-      {{ field(form.tags, placeholder="np. flask, case-study") }}
+      <div class="field">
+        {{ form.tags.label }}
+        {{ form.tags(placeholder="np. flask, case-study", **{"data-tag-input": ""}) }}
+        <datalist id="existing-tags">
+          {% for name in tag_names %}<option value="{{ name }}">{% endfor %}
+        </datalist>
+        {% if form.tags.errors %}
+          <ul class="errors">{% for error in form.tags.errors %}<li>{{ error }}</li>{% endfor %}</ul>
+        {% endif %}
+      </div>
 
       <div class="field">
         <label>Znaczki</label>
@@ -113,5 +122,6 @@
 {% block scripts %}
   <script src="{{ url_for('static', filename='vendor/quill/quill.js') }}"></script>
   <script src="{{ url_for('static', filename='js/admin-editor.js') }}"></script>
+  <script src="{{ url_for('static', filename='js/admin-tag-autocomplete.js') }}"></script>
   <script src="{{ url_for('static', filename='js/admin-dirty-guard.js') }}"></script>
 {% endblock %}

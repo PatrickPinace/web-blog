@@ -26,6 +26,7 @@
     <div class="toolbar">
       <a class="button-like" href="{{ url_for('admin.post_new') }}">+ Nowy wpis</a>
       <a class="button-like" href="{{ url_for('admin.labels') }}">Znaczki</a>
+      <a class="button-like" href="{{ url_for('admin.tags') }}">Tagi</a>
       <span class="filters">
         <a class="{{ 'is-active' if not status_filter }}"
            href="{{ url_for('admin.dashboard', kind=kind_filter, branch=branch_filter, q=search_query) }}">wszystkie</a>

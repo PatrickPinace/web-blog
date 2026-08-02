@@ -2,6 +2,7 @@ from flask_wtf import FlaskForm
 from wtforms import (
     BooleanField,
     HiddenField,
+    IntegerField,
     PasswordField,
     SelectField,
     SelectMultipleField,
@@ -77,6 +78,24 @@ class LabelForm(FlaskForm):
 
 
 class DeleteLabelForm(FlaskForm):
+    """Pusty formularz — wymuszamy CSRF na usuwaniu, jak każda destrukcyjna akcja."""
+
+    pass
+
+
+class RenameTagForm(FlaskForm):
+    name = StringField("Nazwa", validators=[DataRequired(), Length(max=80)])
+
+
+class MergeTagsForm(FlaskForm):
+    # source znika, wszystkie jego wpisy przechodzą na target — kolejność
+    # w formularzu (source, target) musi być czytelna dla użytkownika,
+    # bo to operacja nieodwracalna.
+    source_id = IntegerField(validators=[DataRequired()])
+    target_id = IntegerField(validators=[DataRequired()])
+
+
+class DeleteTagForm(FlaskForm):
     """Pusty formularz — wymuszamy CSRF na usuwaniu, jak każda destrukcyjna akcja."""
 
     pass

@@ -34,6 +34,7 @@ class TestAdminRequiresLogin:
             "/admin/post/1/edit",
             "/admin/post/1/preview",
             "/admin/labels",
+            "/admin/tags",
         ],
     )
     def test_get_redirects_to_login(self, client, path):
@@ -53,6 +54,9 @@ class TestAdminRequiresLogin:
             "/admin/logout",
             "/admin/labels/1/edit",
             "/admin/labels/1/delete",
+            "/admin/tags/1/rename",
+            "/admin/tags/1/delete",
+            "/admin/tags/merge",
         ],
     )
     def test_post_requires_auth(self, client, path):

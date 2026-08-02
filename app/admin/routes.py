@@ -5,18 +5,22 @@ from argon2 import PasswordHasher
 from argon2.exceptions import VerifyMismatchError
 from flask import abort, flash, jsonify, redirect, render_template, request, url_for
 from flask_login import current_user, login_required, login_user, logout_user
+from sqlalchemy import func
 
 from app.admin import admin_bp
 from app.admin.forms import (
     DeleteLabelForm,
     DeletePostForm,
+    DeleteTagForm,
     LabelForm,
     LoginForm,
+    MergeTagsForm,
     PostForm,
     PostStatusForm,
+    RenameTagForm,
 )
 from app.extensions import db, limiter
-from app.models import Image, Label, Post, Tag, User, utcnow
+from app.models import Image, Label, Post, Tag, User, post_tags, utcnow
 from app.public.routes import render_post_body
 from app.utils.embeds import build_youtube_placeholder
 from app.utils.sanitize import SANITIZER_VERSION, sanitize_html
@@ -107,7 +111,9 @@ def post_new():
         db.session.commit()
         flash("Wpis utworzony.", "success")
         return redirect(url_for("admin.dashboard"))
-    return render_template("admin/post_form.html", form=form, post=None)
+    return render_template(
+        "admin/post_form.html", form=form, post=None, tag_names=_tag_names()
+    )
 
 
 @admin_bp.route("/post/<int:post_id>/edit", methods=["GET", "POST"])
@@ -125,7 +131,9 @@ def post_edit(post_id):
         db.session.commit()
         flash("Wpis zapisany.", "success")
         return redirect(url_for("admin.dashboard"))
-    return render_template("admin/post_form.html", form=form, post=post)
+    return render_template(
+        "admin/post_form.html", form=form, post=post, tag_names=_tag_names()
+    )
 
 
 @admin_bp.route("/post/<int:post_id>/duplicate", methods=["POST"])
@@ -160,6 +168,10 @@ def post_duplicate(post_id):
 
 def _label_choices():
     return [(label.id, label.name) for label in Label.query.order_by(Label.name).all()]
+
+
+def _tag_names():
+    return [tag.name for tag in Tag.query.order_by(Tag.name).all()]
 
 
 def _dashboard_branches():
@@ -329,6 +341,88 @@ def label_delete(label_id):
     db.session.commit()
     flash("Znaczek usunięty.", "success")
     return redirect(url_for("admin.labels"))
+
+
+@admin_bp.route("/tags")
+@login_required
+def tags():
+    all_tags = (
+        Tag.query.outerjoin(post_tags, Tag.id == post_tags.c.tag_id)
+        .outerjoin(Post, Post.id == post_tags.c.post_id)
+        .with_entities(Tag, func.count(Post.id))
+        .group_by(Tag.id)
+        .order_by(Tag.name)
+        .all()
+    )
+    return render_template(
+        "admin/tags.html",
+        tags=all_tags,
+        rename_form=RenameTagForm(),
+        merge_form=MergeTagsForm(),
+        delete_form=DeleteTagForm(),
+    )
+
+
+@admin_bp.route("/tags/<int:tag_id>/rename", methods=["POST"])
+@login_required
+def tag_rename(tag_id):
+    tag = Tag.query.get_or_404(tag_id)
+    form = RenameTagForm()
+    if form.validate_on_submit():
+        name = form.name.data.strip()
+        existing = Tag.query.filter(Tag.name == name, Tag.id != tag.id).first()
+        if existing is not None:
+            flash(f"Tag „{name}” już istnieje — użyj scalania zamiast zmiany nazwy.", "error")
+        else:
+            if name != tag.name:
+                tag.slug = unique_slug(
+                    slugify(name),
+                    lambda s: Tag.query.filter(Tag.slug == s, Tag.id != tag.id).first()
+                    is not None,
+                )
+            tag.name = name
+            db.session.commit()
+            flash("Tag zapisany.", "success")
+    return redirect(url_for("admin.tags"))
+
+
+@admin_bp.route("/tags/merge", methods=["POST"])
+@login_required
+def tag_merge():
+    form = MergeTagsForm()
+    if not form.validate_on_submit():
+        abort(400)
+    if form.source_id.data == form.target_id.data:
+        flash("Wybierz dwa różne tagi do scalenia.", "error")
+        return redirect(url_for("admin.tags"))
+
+    source = Tag.query.get_or_404(form.source_id.data)
+    target = Tag.query.get_or_404(form.target_id.data)
+
+    # Posty, które mają już OBA tagi, dostałyby duplikat w post.tags po prostym
+    # dopisaniu — przenosimy tylko z postów, które jeszcze nie mają target.
+    for post in list(source.posts):
+        if target not in post.tags:
+            post.tags.append(target)
+        post.tags.remove(source)
+
+    db.session.delete(source)
+    db.session.commit()
+    flash(f"Tag „{source.name}” scalony z „{target.name}”.", "success")
+    return redirect(url_for("admin.tags"))
+
+
+@admin_bp.route("/tags/<int:tag_id>/delete", methods=["POST"])
+@login_required
+def tag_delete(tag_id):
+    form = DeleteTagForm()
+    if not form.validate_on_submit():
+        abort(400)
+    tag = Tag.query.get_or_404(tag_id)
+    db.session.delete(tag)
+    db.session.commit()
+    flash("Tag usunięty.", "success")
+    return redirect(url_for("admin.tags"))
 
 
 @admin_bp.route("/upload-image", methods=["POST"])

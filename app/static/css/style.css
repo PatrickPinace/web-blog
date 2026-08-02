@@ -557,6 +557,16 @@ html[data-theme="dark"] .admin td button.admin-status-toggle:hover{filter:bright
 
 .admin td.admin-date{font-family:var(--mono);font-size:.76rem;color:var(--faint);cursor:help}
 
+/* Zarządzanie tagami — scalanie (pasek nad tabelą) i zmiana nazwy inline
+   (input obok przycisku w komórce, więc width:100% z .admin input trzeba
+   ograniczyć, inaczej input rozciąga się na całą szerokość i wypycha "Zapisz"). */
+.tag-merge{display:flex;flex-wrap:wrap;gap:10px;align-items:center;
+  font-family:var(--mono);font-size:.8rem;color:var(--muted)}
+.tag-merge select{padding:8px 30px 8px 12px;font-family:var(--sans);font-size:.88rem;
+  color:var(--text);background:var(--surface);border:1px solid var(--line);border-radius:7px}
+.tag-rename{display:flex;gap:8px;align-items:center}
+.tag-rename input[type=text]{width:auto;flex:1;min-width:140px;padding:8px 11px;font-size:.88rem}
+
 /* Akcje w tabeli: „Edytuj · Podgląd · Duplikuj · Usuń”. Duplikuj/Usuń są
    <form><button>, więc bez .inline-action byłyby blokowe i łamałyby wiersz. */
 .admin td a{color:var(--muted);transition:color .15s ease}

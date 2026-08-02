@@ -1,0 +1,75 @@
+{% extends "base.html" %}
+
+{% block title %}Tagi — {{ config.BLOG_TITLE }}{% endblock %}
+{% block body_class %}is-admin{% endblock %}
+
+{% block content %}
+<main class="wrap">
+  <div class="admin admin--wide">
+    <div class="toolbar">
+      <a href="{{ url_for('admin.dashboard') }}">&larr; Panel</a>
+    </div>
+
+    <h1>Tagi</h1>
+    <p class="subtitle">Tagi tematyczne wpisów. Tworzysz je wpisując nazwę
+      przy edycji wpisu — tutaj tylko porządkujesz: zmieniasz nazwę, scalasz
+      dwa podobne (np. literówkę) w jeden, albo usuwasz nieużywany.</p>
+
+    {% if tags|length > 1 %}
+      <form method="post" action="{{ url_for('admin.tag_merge') }}"
+            class="tag-merge" data-confirm="Scalić wybrane tagi? Ta operacja jest nieodwracalna.">
+        {{ merge_form.hidden_tag() }}
+        <span>Scal</span>
+        <select name="source_id">
+          {% for tag, count in tags %}
+            <option value="{{ tag.id }}">{{ tag.name }} ({{ count }})</option>
+          {% endfor %}
+        </select>
+        <span>do</span>
+        <select name="target_id">
+          {% for tag, count in tags %}
+            <option value="{{ tag.id }}">{{ tag.name }} ({{ count }})</option>
+          {% endfor %}
+        </select>
+        <button class="button-like" type="submit">Scal</button>
+      </form>
+    {% endif %}
+
+    {% if tags %}
+      <table style="margin-top:26px">
+        <thead>
+          <tr><th>Tag</th><th>Wpisów</th><th>Akcje</th></tr>
+        </thead>
+        <tbody>
+          {% for tag, count in tags %}
+            <tr>
+              <td>
+                <form method="post" action="{{ url_for('admin.tag_rename', tag_id=tag.id) }}"
+                      class="tag-rename">
+                  {{ rename_form.hidden_tag() }}
+                  <input type="text" name="name" value="{{ tag.name }}" maxlength="80">
+                  <button class="button-like" type="submit">Zapisz</button>
+                </form>
+              </td>
+              <td>{{ count }}</td>
+              <td>
+                <form action="{{ url_for('admin.tag_delete', tag_id=tag.id) }}" method="post"
+                      class="inline-action" data-confirm="Usunąć tag „{{ tag.name }}”?">
+                  {{ delete_form.hidden_tag() }}
+                  <button type="submit">Usuń</button>
+                </form>
+              </td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    {% else %}
+      <p style="margin-top:32px"><em>Brak tagów. Powstają, gdy wpiszesz je przy edycji wpisu.</em></p>
+    {% endif %}
+  </div>
+</main>
+{% endblock %}
+
+{% block scripts %}
+  <script src="{{ url_for('static', filename='js/admin-confirm.js') }}"></script>
+{% endblock %}

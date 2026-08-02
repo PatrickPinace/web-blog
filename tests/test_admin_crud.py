@@ -22,6 +22,31 @@ class TestLogin:
         assert response.request.path == "/admin/"
 
 
+class TestTagAutocomplete:
+    def test_new_post_form_lists_existing_tag_names(self, auth_client, db):
+        from app.models import Tag
+
+        db.session.add(Tag(name="flask", slug="flask"))
+        db.session.commit()
+
+        response = auth_client.get("/admin/post/new")
+        assert response.status_code == 200
+        assert b'<option value="flask">' in response.data
+
+    def test_edit_form_also_lists_existing_tag_names(self, auth_client, db, admin):
+        from app.models import Tag
+
+        db.session.add(Tag(name="django", slug="django"))
+        post = Post(title="Wpis", slug="wpis", body_source="", body_html="",
+                    author_id=admin.id)
+        db.session.add(post)
+        db.session.commit()
+
+        response = auth_client.get(f"/admin/post/{post.id}/edit")
+        assert response.status_code == 200
+        assert b'<option value="django">' in response.data
+
+
 class TestPostCrud:
     def test_create_post_generates_slug_and_sanitizes(self, auth_client, db):
         auth_client.post(

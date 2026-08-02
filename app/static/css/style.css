@@ -44,6 +44,8 @@
   --bg:#ffffff; --surface:#f6f7f9; --text:#15181d; --muted:#5d6672; --faint:#8b95a3;
   --line:#e5e8ec; --line-soft:#eef0f3; --accent:#1f6feb; --accent-soft:rgba(31,111,235,.10);
   --grid:rgba(21,24,29,.055);
+  /* Poświata tła w panelu (patrz body.is-admin). */
+  --admin-glow:rgba(31,111,235,.07); --admin-tint:rgba(21,24,29,.028);
   --sans:"IBM Plex Sans",system-ui,-apple-system,sans-serif;
   --mono:"IBM Plex Mono",ui-monospace,SFMono-Regular,monospace;
   --wrap:1160px; --measure:680px;
@@ -52,12 +54,14 @@ html[data-theme="dark"]{
   --bg:#0b0e13; --surface:#141920; --text:#e5e9ef; --muted:#98a1ae; --faint:#6d7683;
   --line:#222932; --line-soft:#181e26; --accent:#5b9dff; --accent-soft:rgba(91,157,255,.14);
   --grid:rgba(255,255,255,.045);
+  --admin-glow:rgba(91,157,255,.10); --admin-tint:rgba(255,255,255,.022);
 }
 @media (prefers-color-scheme:dark){
   html:not([data-theme]){
     --bg:#0b0e13; --surface:#141920; --text:#e5e9ef; --muted:#98a1ae; --faint:#6d7683;
     --line:#222932; --line-soft:#181e26; --accent:#5b9dff; --accent-soft:rgba(91,157,255,.14);
     --grid:rgba(255,255,255,.045);
+    --admin-glow:rgba(91,157,255,.10); --admin-tint:rgba(255,255,255,.022);
   }
 }
 
@@ -69,6 +73,15 @@ body{
   background-image:linear-gradient(var(--grid) 1px,transparent 1px),linear-gradient(90deg,var(--grid) 1px,transparent 1px);
   background-size:64px 64px;
 }
+/* Panel: bez kratki. Na stronie publicznej siatka jest tłem dla rzadkiego
+   tekstu i działa, ale pod gęstym formularzem robi się szum, który zjada
+   czytelność pól. W zamian miękka poświata akcentu u góry — daje głębię,
+   nie konkurując z treścią. */
+body.is-admin{background-image:none;background-attachment:fixed;
+  background-image:
+    radial-gradient(1100px 520px at 50% -8%, var(--admin-glow), transparent 70%),
+    linear-gradient(180deg, var(--admin-tint) 0%, transparent 340px)}
+
 a{color:var(--accent);text-decoration:none}
 ::selection{background:var(--accent-soft)}
 :focus-visible{outline:2px solid var(--accent);outline-offset:3px;border-radius:2px}
@@ -352,8 +365,11 @@ img{max-width:100%;display:block}
 .admin h1{font-size:1.75rem;letter-spacing:-.025em;font-weight:600;margin:0 0 4px}
 .admin .subtitle{margin:0 0 34px;color:var(--faint);font-size:.9rem}
 
-/* Grupa pola: etykieta + kontrolka + błędy/podpowiedź trzymają się razem. */
-.admin .field{margin:0 0 20px}
+/* Grupa pola: etykieta + kontrolka + błędy/podpowiedź trzymają się razem.
+   Odstęp MIĘDZY grupami musi być wyraźnie większy niż między etykietą
+   a jej polem — inaczej etykieta wizualnie przykleja się do pola powyżej
+   i nie widać, co do czego należy. */
+.admin .field{margin:0 0 26px}
 .admin label{display:block;margin:0 0 7px;font-family:var(--mono);font-size:.68rem;
   letter-spacing:.09em;text-transform:uppercase;color:var(--muted)}
 

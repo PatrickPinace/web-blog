@@ -134,7 +134,7 @@ class TestPostCrud:
         assert post.published_at is not None
         assert client.get(f"/post/{post.slug}").status_code == 200
 
-    def test_delete_removes_post(self, auth_client, db):
+    def test_delete_soft_deletes_post_instead_of_removing_it(self, auth_client, db):
         auth_client.post(
             "/admin/post/new",
             data={
@@ -144,7 +144,37 @@ class TestPostCrud:
         )
         post = Post.query.filter_by(title="Do usuniecia").first()
         auth_client.post(f"/admin/post/{post.id}/delete")
-        assert db.session.get(Post, post.id) is None
+        db.session.refresh(post)
+        assert post.deleted_at is not None
+        assert db.session.get(Post, post.id) is not None
+
+    def test_deleted_post_disappears_from_dashboard(self, auth_client, db):
+        auth_client.post(
+            "/admin/post/new",
+            data={
+                "title": "Znika z listy", "excerpt": "e", "tags": "",
+                "status": "draft", "body_source": "<p>x</p>",
+            },
+        )
+        post = Post.query.filter_by(title="Znika z listy").first()
+        auth_client.post(f"/admin/post/{post.id}/delete")
+
+        response = auth_client.get("/admin/")
+        assert b"Znika z listy" not in response.data
+
+    def test_deleted_post_edit_returns_404(self, auth_client, db):
+        auth_client.post(
+            "/admin/post/new",
+            data={
+                "title": "Bez edycji", "excerpt": "e", "tags": "",
+                "status": "draft", "body_source": "<p>x</p>",
+            },
+        )
+        post = Post.query.filter_by(title="Bez edycji").first()
+        auth_client.post(f"/admin/post/{post.id}/delete")
+
+        response = auth_client.get(f"/admin/post/{post.id}/edit")
+        assert response.status_code == 404
 
     def test_duplicate_creates_draft_copy_with_new_slug(self, auth_client, db, admin):
         from app.models import Label, Tag
@@ -481,6 +511,150 @@ class TestPostMetadataFields:
         )
         post = Post.query.filter_by(title="Pusta branza").first()
         assert post.branch is None
+
+
+class TestTrash:
+    def test_trash_lists_only_deleted_posts(self, auth_client, db, admin):
+        kept = Post(
+            title="Zyje", slug="zyje", body_source="", body_html="", author_id=admin.id
+        )
+        deleted = Post(
+            title="Usuniety", slug="usuniety", body_source="", body_html="",
+            author_id=admin.id,
+        )
+        deleted.soft_delete()
+        db.session.add_all([kept, deleted])
+        db.session.commit()
+
+        response = auth_client.get("/admin/kosz")
+        assert b"Usuniety" in response.data
+        assert b"Zyje" not in response.data
+
+    def test_restore_moves_post_back_to_dashboard_as_draft(self, auth_client, db, admin):
+        post = Post(
+            title="Do przywrocenia", slug="do-przywrocenia", body_source="",
+            body_html="", author_id=admin.id,
+        )
+        post.publish()
+        post.soft_delete()
+        db.session.add(post)
+        db.session.commit()
+
+        response = auth_client.post(
+            f"/admin/post/{post.id}/restore", follow_redirects=True
+        )
+        assert response.status_code == 200
+
+        db.session.refresh(post)
+        assert post.deleted_at is None
+        assert post.status == Post.STATUS_DRAFT
+
+        dashboard = auth_client.get("/admin/")
+        assert b"Do przywrocenia" in dashboard.data
+
+    def test_restore_on_non_deleted_post_returns_404(self, auth_client, db, admin):
+        post = Post(
+            title="Nieusuniety", slug="nieusuniety", body_source="", body_html="",
+            author_id=admin.id,
+        )
+        db.session.add(post)
+        db.session.commit()
+
+        response = auth_client.post(f"/admin/post/{post.id}/restore")
+        assert response.status_code == 404
+
+    def test_purge_permanently_removes_post(self, auth_client, db, admin):
+        post = Post(
+            title="Do zagłady", slug="do-zaglady", body_source="", body_html="",
+            author_id=admin.id,
+        )
+        post.soft_delete()
+        db.session.add(post)
+        db.session.commit()
+        post_id = post.id
+
+        response = auth_client.post(
+            f"/admin/post/{post_id}/purge", follow_redirects=True
+        )
+        assert response.status_code == 200
+        assert db.session.get(Post, post_id) is None
+
+    def test_purge_on_non_deleted_post_returns_404(self, auth_client, db, admin):
+        post = Post(
+            title="Zywy jeszcze", slug="zywy-jeszcze", body_source="", body_html="",
+            author_id=admin.id,
+        )
+        db.session.add(post)
+        db.session.commit()
+
+        response = auth_client.post(f"/admin/post/{post.id}/purge")
+        assert response.status_code == 404
+        assert db.session.get(Post, post.id) is not None
+
+    def test_dashboard_shows_trash_count(self, auth_client, db, admin):
+        post = Post(
+            title="W koszu", slug="w-koszu", body_source="", body_html="",
+            author_id=admin.id,
+        )
+        post.soft_delete()
+        db.session.add(post)
+        db.session.commit()
+
+        response = auth_client.get("/admin/")
+        assert b"Kosz (1)" in response.data
+
+    def test_toggle_status_on_deleted_post_returns_404(self, auth_client, db, admin):
+        post = Post(
+            title="Nie da sie przelaczyc", slug="nie-da-sie-przelaczyc",
+            body_source="", body_html="", author_id=admin.id,
+        )
+        post.soft_delete()
+        db.session.add(post)
+        db.session.commit()
+
+        response = auth_client.post(f"/admin/post/{post.id}/toggle-status")
+        assert response.status_code == 404
+
+    def test_duplicate_of_deleted_post_returns_404(self, auth_client, db, admin):
+        post = Post(
+            title="Nie do duplikacji", slug="nie-do-duplikacji",
+            body_source="", body_html="", author_id=admin.id,
+        )
+        post.soft_delete()
+        db.session.add(post)
+        db.session.commit()
+
+        response = auth_client.post(f"/admin/post/{post.id}/duplicate")
+        assert response.status_code == 404
+
+    def test_preview_of_deleted_post_returns_404(self, auth_client, db, admin):
+        post = Post(
+            title="Bez podgladu", slug="bez-podgladu",
+            body_source="", body_html="", author_id=admin.id,
+        )
+        post.soft_delete()
+        db.session.add(post)
+        db.session.commit()
+
+        response = auth_client.get(f"/admin/post/{post.id}/preview")
+        assert response.status_code == 404
+
+    def test_deleted_published_post_disappears_from_public_site(
+        self, auth_client, client, db, admin
+    ):
+        post = Post(
+            title="Publiczny znika", slug="publiczny-znika",
+            body_source="<p>x</p>", body_html="<p>x</p>", author_id=admin.id,
+        )
+        post.publish()
+        db.session.add(post)
+        db.session.commit()
+
+        detail_url = f"/post/{post.slug}"
+        assert client.get(detail_url).status_code == 200
+
+        auth_client.post(f"/admin/post/{post.id}/delete")
+        assert client.get(detail_url).status_code == 404
 
     def test_unchecking_is_concept_clears_the_flag(self, auth_client, db):
         auth_client.post(

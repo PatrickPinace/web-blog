@@ -27,6 +27,7 @@
       <a class="button-like" href="{{ url_for('admin.post_new') }}">+ Nowy wpis</a>
       <a class="button-like" href="{{ url_for('admin.labels') }}">Znaczki</a>
       <a class="button-like" href="{{ url_for('admin.tags') }}">Tagi</a>
+      <a class="button-like" href="{{ url_for('admin.trash') }}">Kosz{% if stats.trash_count %} ({{ stats.trash_count }}){% endif %}</a>
       <span class="filters">
         <a class="{{ 'is-active' if not status_filter }}"
            href="{{ url_for('admin.dashboard', kind=kind_filter, branch=branch_filter, q=search_query) }}">wszystkie</a>

@@ -456,6 +456,23 @@ img{max-width:100%;display:block}
 .admin h1{font-size:1.75rem;letter-spacing:-.025em;font-weight:600;margin:0 0 4px}
 .admin .subtitle{margin:0 0 34px;color:var(--faint);font-size:.9rem}
 
+/* Formularz wpisu ma 8+ pól w jednej kolumnie — bez podziału na sekcje
+   trudno się w nim zorientować, gdzie kończy się "co to za wpis" a zaczyna
+   "jak jest sklasyfikowany". legend przejmuje styl etykiet pola (mono,
+   uppercase), żeby sekcja czytała się jak nagłówek, nie jak kolejne pole. */
+.admin-section{border:0;margin:0 0 40px;padding:0}
+.admin-section:last-of-type{margin-bottom:0}
+.admin-section legend{padding:0 0 16px;margin-bottom:18px;width:100%;
+  border-bottom:1px solid var(--line-soft);font-family:var(--mono);
+  font-size:.72rem;letter-spacing:.09em;text-transform:uppercase;color:var(--faint)}
+.admin-section .field:last-child{margin-bottom:0}
+/* Publikacja to jedyna decyzja w formularzu, która natychmiast zmienia,
+   co widzi czytelnik — obudowanie jej ramką odróżnia ją od reszty pól,
+   które są tylko metadanymi. */
+.admin-section--publish{padding:20px 24px;background:var(--surface);
+  border:1px solid var(--line-soft);border-radius:10px}
+.admin-section--publish legend{border-bottom:0;padding-bottom:0;margin-bottom:14px}
+
 /* Grupa pola: etykieta + kontrolka + błędy/podpowiedź trzymają się razem.
    Odstęp MIĘDZY grupami musi być wyraźnie większy niż między etykietą
    a jej polem — inaczej etykieta wizualnie przykleja się do pola powyżej

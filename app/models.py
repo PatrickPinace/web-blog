@@ -85,6 +85,11 @@ class Post(db.Model):
         db.DateTime(timezone=True), default=utcnow, onupdate=utcnow, nullable=False
     )
 
+    # Usunięcie z panelu jest odwracalne (kosz) — wpis dostaje deleted_at
+    # zamiast znikać od razu z bazy. Trwałe usunięcie to osobna, świadoma
+    # akcja tylko z widoku kosza.
+    deleted_at = db.Column(db.DateTime(timezone=True), nullable=True, index=True)
+
     author_id = db.Column(db.Integer, db.ForeignKey("user.id"), nullable=False)
     author = db.relationship("User", back_populates="posts")
 
@@ -101,6 +106,20 @@ class Post(db.Model):
     @property
     def is_published(self):
         return self.status == self.STATUS_PUBLISHED
+
+    @property
+    def is_deleted(self):
+        return self.deleted_at is not None
+
+    def soft_delete(self):
+        # STATUS_DRAFT na wszelki wypadek — usunięty wpis nie ma prawa
+        # przejść przez published_posts_query() nawet gdyby ktoś kiedyś
+        # zapomniał dopisać filtra po deleted_at.
+        self.status = self.STATUS_DRAFT
+        self.deleted_at = utcnow()
+
+    def restore(self):
+        self.deleted_at = None
 
     def publish(self):
         if self.published_at is None:

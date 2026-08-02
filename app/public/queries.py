@@ -16,9 +16,9 @@ def published_posts_query():
     Cały ruch publiczny MUSI przechodzić przez tę funkcję — draft nie może
     wyciec przez żadną publiczną ścieżkę, nawet po zgadnięciu sluga.
     """
-    return Post.query.filter_by(status=Post.STATUS_PUBLISHED).order_by(
-        Post.published_at.desc()
-    )
+    return Post.query.filter_by(
+        status=Post.STATUS_PUBLISHED, deleted_at=None
+    ).order_by(Post.published_at.desc())
 
 
 def get_published_post_or_404(slug):
@@ -38,7 +38,7 @@ def get_neighbours(post):
     if not post.is_published or post.published_at is None:
         return None, None
 
-    base = Post.query.filter_by(status=Post.STATUS_PUBLISHED)
+    base = Post.query.filter_by(status=Post.STATUS_PUBLISHED, deleted_at=None)
 
     previous = (
         base.filter(Post.published_at < post.published_at)
@@ -57,7 +57,7 @@ def get_blog_stats():
     """Liczby na stronę główną: ile wpisów, ile branż."""
     posts = published_posts_query().count()
     branches = (
-        Post.query.filter_by(status=Post.STATUS_PUBLISHED)
+        Post.query.filter_by(status=Post.STATUS_PUBLISHED, deleted_at=None)
         .filter(Post.branch.isnot(None), Post.branch != "")
         .with_entities(func.count(func.distinct(Post.branch)))
         .scalar()
@@ -72,7 +72,7 @@ def get_top_tags(limit=TOP_TAGS_LIMIT):
     return (
         Tag.query.join(post_tags, Tag.id == post_tags.c.tag_id)
         .join(Post, Post.id == post_tags.c.post_id)
-        .filter(Post.status == Post.STATUS_PUBLISHED)
+        .filter(Post.status == Post.STATUS_PUBLISHED, Post.deleted_at.is_(None))
         .group_by(Tag.id)
         .order_by(func.count(Post.id).desc(), Tag.name)
         .limit(limit)
@@ -83,7 +83,7 @@ def get_top_tags(limit=TOP_TAGS_LIMIT):
 def get_branches():
     """Unikalne branże opublikowanych wpisów, z licznikiem, do filtra."""
     rows = (
-        Post.query.filter_by(status=Post.STATUS_PUBLISHED)
+        Post.query.filter_by(status=Post.STATUS_PUBLISHED, deleted_at=None)
         .filter(Post.branch.isnot(None), Post.branch != "")
         .with_entities(Post.branch, func.count(Post.id))
         .group_by(Post.branch)

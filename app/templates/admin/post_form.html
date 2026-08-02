@@ -39,77 +39,89 @@
     <form method="post" novalidate data-dirty-guard>
       {{ form.hidden_tag() }}
 
-      {{ field(form.title) }}
-      {{ field(form.excerpt) }}
-      {{ field(form.kind) }}
-      {{ field(form.branch, placeholder="np. gastronomia") }}
+      <fieldset class="admin-section">
+        <legend>Podstawy</legend>
+        {{ field(form.title) }}
+        {{ field(form.excerpt) }}
+      </fieldset>
 
-      <div class="field">
-        <div class="checkbox">
-          {{ form.is_concept() }}
-          {{ form.is_concept.label }}
-        </div>
-        <p class="hint">Zaznacz, jeśli klient jest przykładem, a nie prawdziwym
-          zleceniem — wpis dostanie widoczną etykietę „Projekt koncepcyjny”.</p>
-      </div>
+      <fieldset class="admin-section">
+        <legend>Klasyfikacja</legend>
+        {{ field(form.kind) }}
+        {{ field(form.branch, placeholder="np. gastronomia") }}
 
-      <div class="field">
-        {{ form.tags.label }}
-        {{ form.tags(placeholder="np. flask, case-study", **{"data-tag-input": ""}) }}
-        <datalist id="existing-tags">
-          {% for name in tag_names %}<option value="{{ name }}">{% endfor %}
-        </datalist>
-        {% if form.tags.errors %}
-          <ul class="errors">{% for error in form.tags.errors %}<li>{{ error }}</li>{% endfor %}</ul>
-        {% endif %}
-      </div>
-
-      <div class="field">
-        <label>Znaczki</label>
-        {% if form.labels.choices %}
-          <div class="checkbox-group">
-            {% for value, label_text in form.labels.choices %}
-              <div class="checkbox">
-                <input type="checkbox" name="{{ form.labels.name }}" value="{{ value }}"
-                       id="label-{{ value }}" {{ 'checked' if value in (form.labels.data or []) }}>
-                <label for="label-{{ value }}">{{ label_text }}</label>
-              </div>
-            {% endfor %}
+        <div class="field">
+          <div class="checkbox">
+            {{ form.is_concept() }}
+            {{ form.is_concept.label }}
           </div>
-        {% else %}
-          <p class="hint">Brak znaczków —
-            <a href="{{ url_for('admin.labels') }}">dodaj pierwszy w panelu zarządzania</a>.</p>
-        {% endif %}
-      </div>
-
-      {{ field(form.status) }}
-
-      {# Quill wstawia swój toolbar jako rodzeństwo TUŻ PRZED #editor-root,
-         wewnątrz rodzica — dlatego .editor-shell obejmuje oba, a przyciski
-         akcji siedzą w tym samym pudełku, nad paskiem narzędzi. #}
-      <div class="field">
-        <label>Treść</label>
-        <div class="editor-shell">
-          <div class="editor-actions">
-            <label class="button-like" for="image-upload">Wstaw obrazek (plik)</label>
-            <input type="file" id="image-upload" accept="image/*" hidden
-                   data-endpoint="{{ url_for('admin.upload_image_endpoint') }}">
-            <button type="button" class="button-like" id="image-by-url"
-                    data-endpoint="{{ url_for('admin.check_image_url_endpoint') }}">Obrazek z URL</button>
-            <button type="button" class="button-like" id="embed-youtube"
-                    data-endpoint="{{ url_for('admin.embed_youtube_endpoint') }}">Wstaw film YouTube</button>
-          </div>
-
-          {# Treść startowa przekazywana przez wartość pola, nie przez wstrzyknięcie
-             do HTML — dzięki temu autoescaping Jinja2 zostaje aktywny. #}
-          <input type="hidden" id="initial-content" value="{{ post.body_source if post else '' }}">
-
-          <div id="editor-root"
-               data-target-field="{{ form.body_source.id }}"
-               data-csrf-token="{{ csrf_token() }}"></div>
+          <p class="hint">Zaznacz, jeśli klient jest przykładem, a nie prawdziwym
+            zleceniem — wpis dostanie widoczną etykietę „Projekt koncepcyjny”.</p>
         </div>
-        {{ form.body_source() }}
-      </div>
+
+        <div class="field">
+          {{ form.tags.label }}
+          {{ form.tags(placeholder="np. flask, case-study", **{"data-tag-input": ""}) }}
+          <datalist id="existing-tags">
+            {% for name in tag_names %}<option value="{{ name }}">{% endfor %}
+          </datalist>
+          {% if form.tags.errors %}
+            <ul class="errors">{% for error in form.tags.errors %}<li>{{ error }}</li>{% endfor %}</ul>
+          {% endif %}
+        </div>
+
+        <div class="field">
+          <label>Znaczki</label>
+          {% if form.labels.choices %}
+            <div class="checkbox-group">
+              {% for value, label_text in form.labels.choices %}
+                <div class="checkbox">
+                  <input type="checkbox" name="{{ form.labels.name }}" value="{{ value }}"
+                         id="label-{{ value }}" {{ 'checked' if value in (form.labels.data or []) }}>
+                  <label for="label-{{ value }}">{{ label_text }}</label>
+                </div>
+              {% endfor %}
+            </div>
+          {% else %}
+            <p class="hint">Brak znaczków —
+              <a href="{{ url_for('admin.labels') }}">dodaj pierwszy w panelu zarządzania</a>.</p>
+          {% endif %}
+        </div>
+      </fieldset>
+
+      <fieldset class="admin-section">
+        <legend>Treść</legend>
+        {# Quill wstawia swój toolbar jako rodzeństwo TUŻ PRZED #editor-root,
+           wewnątrz rodzica — dlatego .editor-shell obejmuje oba, a przyciski
+           akcji siedzą w tym samym pudełku, nad paskiem narzędzi. #}
+        <div class="field">
+          <div class="editor-shell">
+            <div class="editor-actions">
+              <label class="button-like" for="image-upload">Wstaw obrazek (plik)</label>
+              <input type="file" id="image-upload" accept="image/*" hidden
+                     data-endpoint="{{ url_for('admin.upload_image_endpoint') }}">
+              <button type="button" class="button-like" id="image-by-url"
+                      data-endpoint="{{ url_for('admin.check_image_url_endpoint') }}">Obrazek z URL</button>
+              <button type="button" class="button-like" id="embed-youtube"
+                      data-endpoint="{{ url_for('admin.embed_youtube_endpoint') }}">Wstaw film YouTube</button>
+            </div>
+
+            {# Treść startowa przekazywana przez wartość pola, nie przez wstrzyknięcie
+               do HTML — dzięki temu autoescaping Jinja2 zostaje aktywny. #}
+            <input type="hidden" id="initial-content" value="{{ post.body_source if post else '' }}">
+
+            <div id="editor-root"
+                 data-target-field="{{ form.body_source.id }}"
+                 data-csrf-token="{{ csrf_token() }}"></div>
+          </div>
+          {{ form.body_source() }}
+        </div>
+      </fieldset>
+
+      <fieldset class="admin-section admin-section--publish">
+        <legend>Publikacja</legend>
+        {{ field(form.status) }}
+      </fieldset>
 
       <div class="actions">
         <button class="btn btn-primary" type="submit">Zapisz</button>

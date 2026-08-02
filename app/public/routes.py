@@ -95,7 +95,9 @@ def tags():
     """Pełna lista tagów jako punkt wejścia — inaczej trzeba je odkrywać
     jeden po drugim, klikając na wpisy, które je mają."""
     all_tags = (
-        Tag.query.filter(Tag.posts.any(status=Post.STATUS_PUBLISHED))
+        Tag.query.filter(
+            Tag.posts.any(status=Post.STATUS_PUBLISHED, deleted_at=None)
+        )
         .order_by(Tag.name)
         .all()
     )

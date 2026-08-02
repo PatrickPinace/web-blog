@@ -70,7 +70,9 @@ def dashboard():
     branch_filter = request.args.get("branch")
     search_query = request.args.get("q", "").strip()
 
-    query = Post.query.order_by(Post.created_at.desc())
+    query = Post.query.filter(Post.deleted_at.is_(None)).order_by(
+        Post.created_at.desc()
+    )
     if status_filter in (Post.STATUS_DRAFT, Post.STATUS_PUBLISHED):
         query = query.filter_by(status=status_filter)
     if kind_filter in Post.KINDS:
@@ -119,7 +121,7 @@ def post_new():
 @admin_bp.route("/post/<int:post_id>/edit", methods=["GET", "POST"])
 @login_required
 def post_edit(post_id):
-    post = Post.query.get_or_404(post_id)
+    post = Post.query.filter(Post.deleted_at.is_(None), Post.id == post_id).first_or_404()
     form = PostForm(obj=post)
     form.labels.choices = _label_choices()
     if request.method == "GET":
@@ -142,7 +144,7 @@ def post_duplicate(post_id):
     form = DeletePostForm()
     if not form.validate_on_submit():
         abort(400)
-    original = Post.query.get_or_404(post_id)
+    original = Post.query.filter(Post.deleted_at.is_(None), Post.id == post_id).first_or_404()
 
     title = f"{original.title} (kopia)"
     copy = Post(
@@ -178,7 +180,9 @@ def _dashboard_branches():
     """Branże wszystkich wpisów (w tym szkiców) — inaczej niż get_branches()
     na stronie publicznej, która celowo liczy tylko opublikowane."""
     rows = (
-        Post.query.filter(Post.branch.isnot(None), Post.branch != "")
+        Post.query.filter(
+            Post.deleted_at.is_(None), Post.branch.isnot(None), Post.branch != ""
+        )
         .with_entities(Post.branch)
         .distinct()
         .order_by(Post.branch)
@@ -188,12 +192,18 @@ def _dashboard_branches():
 
 
 def _dashboard_stats():
-    """Liczone od WSZYSTKICH wpisów, niezależnie od aktywnego filtra —
-    orientacja "ile mam ogółem", nie "ile w przefiltrowanym widoku"."""
-    draft_count = Post.query.filter_by(status=Post.STATUS_DRAFT).count()
-    published_count = Post.query.filter_by(status=Post.STATUS_PUBLISHED).count()
+    """Liczone od WSZYSTKICH wpisów (poza koszem), niezależnie od aktywnego
+    filtra — orientacja "ile mam ogółem", nie "ile w przefiltrowanym widoku"."""
+    not_deleted = Post.deleted_at.is_(None)
+    draft_count = Post.query.filter(
+        not_deleted, Post.status == Post.STATUS_DRAFT
+    ).count()
+    published_count = Post.query.filter(
+        not_deleted, Post.status == Post.STATUS_PUBLISHED
+    ).count()
+    trash_count = Post.query.filter(Post.deleted_at.isnot(None)).count()
     oldest_draft = (
-        Post.query.filter_by(status=Post.STATUS_DRAFT)
+        Post.query.filter(not_deleted, Post.status == Post.STATUS_DRAFT)
         .order_by(Post.updated_at.asc())
         .first()
     )
@@ -208,6 +218,7 @@ def _dashboard_stats():
     return {
         "draft_count": draft_count,
         "published_count": published_count,
+        "trash_count": trash_count,
         "oldest_draft": oldest_draft,
         "oldest_draft_days": oldest_draft_days,
     }
@@ -226,7 +237,7 @@ def _safe_admin_redirect(target):
 @admin_bp.route("/post/<int:post_id>/preview")
 @login_required
 def post_preview(post_id):
-    post = Post.query.get_or_404(post_id)
+    post = Post.query.filter(Post.deleted_at.is_(None), Post.id == post_id).first_or_404()
     # Ten sam szablon co publicznie, więc musi dostać komplet danych.
     # Sąsiadów nie pokazujemy — szkic nie ma miejsca w osi publikacji.
     body_html, headings = render_post_body(post)
@@ -247,11 +258,55 @@ def post_delete(post_id):
     form = DeletePostForm()
     if not form.validate_on_submit():
         abort(400)
-    post = Post.query.get_or_404(post_id)
+    post = Post.query.filter(Post.deleted_at.is_(None), Post.id == post_id).first_or_404()
+    post.soft_delete()
+    db.session.commit()
+    flash("Wpis przeniesiony do kosza.", "success")
+    return redirect(url_for("admin.dashboard"))
+
+
+@admin_bp.route("/kosz")
+@login_required
+def trash():
+    posts = (
+        Post.query.filter(Post.deleted_at.isnot(None))
+        .order_by(Post.deleted_at.desc())
+        .all()
+    )
+    return render_template(
+        "admin/trash.html",
+        posts=posts,
+        restore_form=PostStatusForm(),
+        purge_form=DeletePostForm(),
+    )
+
+
+@admin_bp.route("/post/<int:post_id>/restore", methods=["POST"])
+@login_required
+def post_restore(post_id):
+    form = PostStatusForm()
+    if not form.validate_on_submit():
+        abort(400)
+    post = Post.query.filter(Post.deleted_at.isnot(None), Post.id == post_id).first_or_404()
+    post.restore()
+    db.session.commit()
+    flash("Wpis przywrócony jako szkic.", "success")
+    return redirect(url_for("admin.trash"))
+
+
+@admin_bp.route("/post/<int:post_id>/purge", methods=["POST"])
+@login_required
+def post_purge(post_id):
+    """Trwałe usunięcie — dostępne TYLKO dla wpisów już w koszu, żeby nie
+    dało się przypadkiem ominąć etapu pośredniego."""
+    form = DeletePostForm()
+    if not form.validate_on_submit():
+        abort(400)
+    post = Post.query.filter(Post.deleted_at.isnot(None), Post.id == post_id).first_or_404()
     db.session.delete(post)
     db.session.commit()
-    flash("Wpis usunięty.", "success")
-    return redirect(url_for("admin.dashboard"))
+    flash("Wpis usunięty trwale.", "success")
+    return redirect(url_for("admin.trash"))
 
 
 @admin_bp.route("/post/<int:post_id>/toggle-status", methods=["POST"])
@@ -260,7 +315,7 @@ def post_toggle_status(post_id):
     form = PostStatusForm()
     if not form.validate_on_submit():
         abort(400)
-    post = Post.query.get_or_404(post_id)
+    post = Post.query.filter(Post.deleted_at.is_(None), Post.id == post_id).first_or_404()
     if post.is_published:
         post.unpublish()
         flash("Wpis wrócił do szkiców.", "success")

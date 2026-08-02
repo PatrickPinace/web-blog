@@ -18,6 +18,9 @@
            że klient jest przykładem, a nie prawdziwym zleceniem. #}
         <span class="flag"><span class="dot"></span>Projekt koncepcyjny</span>
       {% endif %}
+      {% for label in post.labels %}
+        <span class="flag flag--{{ label.color }}"><span class="dot"></span>{{ label.name }}</span>
+      {% endfor %}
       {% if post.published_at %}
         <time datetime="{{ post.published_at.isoformat() }}">{{ post.published_at.strftime('%d.%m.%Y') }}</time>
       {% else %}

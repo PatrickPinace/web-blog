@@ -19,6 +19,9 @@
               <span class="meta">
                 <span class="kind">{{ post.kind }}</span>
                 {% if post.branch %}<span class="branch">{{ post.branch }}</span>{% endif %}
+                {% for label in post.labels %}
+                  <span class="flag flag--{{ label.color }}"><span class="dot"></span>{{ label.name }}</span>
+                {% endfor %}
               </span>
               <span class="title">{{ post.title }}</span>
               {% if post.excerpt %}<span class="lead">{{ post.excerpt }}</span>{% endif %}

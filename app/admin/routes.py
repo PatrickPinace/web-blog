@@ -4,9 +4,15 @@ from flask import abort, flash, jsonify, redirect, render_template, request, url
 from flask_login import current_user, login_required, login_user, logout_user
 
 from app.admin import admin_bp
-from app.admin.forms import DeletePostForm, LoginForm, PostForm
+from app.admin.forms import (
+    DeleteLabelForm,
+    DeletePostForm,
+    LabelForm,
+    LoginForm,
+    PostForm,
+)
 from app.extensions import db, limiter
-from app.models import Image, Post, Tag, User
+from app.models import Image, Label, Post, Tag, User
 from app.public.routes import render_post_body
 from app.utils.embeds import build_youtube_placeholder
 from app.utils.sanitize import SANITIZER_VERSION, sanitize_html
@@ -68,10 +74,11 @@ def dashboard():
 @login_required
 def post_new():
     form = PostForm()
+    form.labels.choices = _label_choices()
     if form.validate_on_submit():
-        post = Post(author_id=current_user.id)
-        _apply_form_to_post(form, post, is_new=True)
+        post = Post(author_id=current_user.id, title="", slug="")
         db.session.add(post)
+        _apply_form_to_post(form, post, is_new=True)
         db.session.commit()
         flash("Wpis utworzony.", "success")
         return redirect(url_for("admin.dashboard"))
@@ -83,8 +90,10 @@ def post_new():
 def post_edit(post_id):
     post = Post.query.get_or_404(post_id)
     form = PostForm(obj=post)
+    form.labels.choices = _label_choices()
     if request.method == "GET":
         form.tags.data = ", ".join(tag.name for tag in post.tags)
+        form.labels.data = [label.id for label in post.labels]
 
     if form.validate_on_submit():
         _apply_form_to_post(form, post, is_new=False)
@@ -92,6 +101,10 @@ def post_edit(post_id):
         flash("Wpis zapisany.", "success")
         return redirect(url_for("admin.dashboard"))
     return render_template("admin/post_form.html", form=form, post=post)
+
+
+def _label_choices():
+    return [(label.id, label.name) for label in Label.query.order_by(Label.name).all()]
 
 
 @admin_bp.route("/post/<int:post_id>/preview")
@@ -123,6 +136,78 @@ def post_delete(post_id):
     db.session.commit()
     flash("Wpis usunięty.", "success")
     return redirect(url_for("admin.dashboard"))
+
+
+@admin_bp.route("/labels", methods=["GET", "POST"])
+@login_required
+def labels():
+    form = LabelForm()
+    if form.validate_on_submit():
+        name = form.name.data.strip()
+        if Label.query.filter_by(name=name).first() is not None:
+            flash(f"Znaczek „{name}” już istnieje.", "error")
+        else:
+            label = Label(
+                name=name,
+                color=form.color.data,
+                slug=unique_slug(
+                    slugify(name),
+                    lambda s: Label.query.filter_by(slug=s).first() is not None,
+                ),
+            )
+            db.session.add(label)
+            db.session.commit()
+            flash("Znaczek dodany.", "success")
+        return redirect(url_for("admin.labels"))
+
+    all_labels = Label.query.order_by(Label.name).all()
+    return render_template(
+        "admin/labels.html",
+        form=form,
+        labels=all_labels,
+        delete_form=DeleteLabelForm(),
+    )
+
+
+@admin_bp.route("/labels/<int:label_id>/edit", methods=["POST"])
+@login_required
+def label_edit(label_id):
+    label = Label.query.get_or_404(label_id)
+    form = LabelForm()
+    if form.validate_on_submit():
+        name = form.name.data.strip()
+        existing = Label.query.filter(
+            Label.name == name, Label.id != label.id
+        ).first()
+        if existing is not None:
+            flash(f"Znaczek „{name}” już istnieje.", "error")
+        else:
+            if name != label.name:
+                label.slug = unique_slug(
+                    slugify(name),
+                    lambda s: Label.query.filter(
+                        Label.slug == s, Label.id != label.id
+                    ).first()
+                    is not None,
+                )
+            label.name = name
+            label.color = form.color.data
+            db.session.commit()
+            flash("Znaczek zapisany.", "success")
+    return redirect(url_for("admin.labels"))
+
+
+@admin_bp.route("/labels/<int:label_id>/delete", methods=["POST"])
+@login_required
+def label_delete(label_id):
+    form = DeleteLabelForm()
+    if not form.validate_on_submit():
+        abort(400)
+    label = Label.query.get_or_404(label_id)
+    db.session.delete(label)
+    db.session.commit()
+    flash("Znaczek usunięty.", "success")
+    return redirect(url_for("admin.labels"))
 
 
 @admin_bp.route("/upload-image", methods=["POST"])
@@ -171,6 +256,7 @@ def _apply_form_to_post(form, post, is_new):
     post.kind = form.kind.data
     post.branch = (form.branch.data or "").strip() or None
     post.is_concept = bool(form.is_concept.data)
+    post.labels = Label.query.filter(Label.id.in_(form.labels.data or [])).all()
 
     # Kolejność zapisu jest obowiązkowa (plan, sekcja 5): body_source
     # najpierw bez zmian, potem body_html = sanitize(body_source).

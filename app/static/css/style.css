@@ -47,6 +47,10 @@
   --glow-a:rgba(31,111,235,.08); --glow-b:rgba(180,90,220,.07);
   /* Poświata tła w panelu (patrz body.is-admin). */
   --admin-glow:rgba(31,111,235,.07); --admin-tint:rgba(21,24,29,.028);
+  /* Paleta znaczków (Label) — niezależna od --accent, żeby dało się
+     rozróżnić kilka flag na jednym wpisie. */
+  --label-purple:#8b5cf6; --label-green:#1a9c6b; --label-amber:#b8860b;
+  --label-red:#e5484d; --label-gray:#6d7683;
   --sans:"IBM Plex Sans",system-ui,-apple-system,sans-serif;
   --mono:"IBM Plex Mono",ui-monospace,SFMono-Regular,monospace;
   --wrap:1160px; --measure:680px;
@@ -56,6 +60,8 @@ html[data-theme="dark"]{
   --line:#222932; --line-soft:#181e26; --accent:#5b9dff; --accent-soft:rgba(91,157,255,.14);
   --glow-a:rgba(91,157,255,.09); --glow-b:rgba(190,110,240,.07);
   --admin-glow:rgba(91,157,255,.10); --admin-tint:rgba(255,255,255,.022);
+  --label-purple:#a78bfa; --label-green:#34d399; --label-amber:#e0a840;
+  --label-red:#f0656a; --label-gray:#98a1ae;
 }
 @media (prefers-color-scheme:dark){
   html:not([data-theme]){
@@ -63,6 +69,8 @@ html[data-theme="dark"]{
     --line:#222932; --line-soft:#181e26; --accent:#5b9dff; --accent-soft:rgba(91,157,255,.14);
     --glow-a:rgba(91,157,255,.09); --glow-b:rgba(190,110,240,.07);
     --admin-glow:rgba(91,157,255,.10); --admin-tint:rgba(255,255,255,.022);
+    --label-purple:#a78bfa; --label-green:#34d399; --label-amber:#e0a840;
+    --label-red:#f0656a; --label-gray:#98a1ae;
   }
 }
 
@@ -415,6 +423,19 @@ img{max-width:100%;display:block}
   font-family:var(--mono);font-size:.66rem;letter-spacing:.08em;
   text-transform:uppercase;color:var(--accent)}
 .flag .dot{width:5px;height:5px;border-radius:50%;background:var(--accent)}
+/* Znaczki własne (Label) — kolor niezależny od --accent, żeby kilka
+   flag na jednym wpisie było od siebie odróżnialnych. */
+.flag--purple{color:var(--label-purple)}
+.flag--purple .dot{background:var(--label-purple)}
+.flag--green{color:var(--label-green)}
+.flag--green .dot{background:var(--label-green)}
+.flag--amber{color:var(--label-amber)}
+.flag--amber .dot{background:var(--label-amber)}
+.flag--red{color:var(--label-red)}
+.flag--red .dot{background:var(--label-red)}
+.flag--gray{color:var(--label-gray)}
+.flag--gray .dot{background:var(--label-gray)}
+.flag + .flag{margin-left:10px}
 /* W wierszu tabeli dashboardu tytuł już nie zawija się (kolumna szeroka),
    więc bez odstępu flaga stykałaby się z ostatnim słowem tytułu. Na stronie
    publicznej .flag stoi jako pierwszy element .post-meta — tam odstęp
@@ -475,6 +496,11 @@ img{max-width:100%;display:block}
 .admin .checkbox input[type=checkbox]:focus-visible{outline:none;box-shadow:0 0 0 3px var(--accent-soft)}
 .admin .checkbox label{margin:0;text-transform:none;letter-spacing:0;font-family:var(--sans);
   font-size:.93rem;color:var(--text);cursor:pointer}
+
+/* Kilka .checkbox pod sobą (znaczki wpisu) — sam .checkbox ma margines
+   tylko na dole, więc grupa nie potrzebuje nic więcej niż wrapper. */
+.admin .checkbox-group .checkbox{margin-bottom:8px}
+.admin .checkbox-group .checkbox:last-child{margin-bottom:0}
 
 .admin .hint{margin:8px 0 0;font-size:.8rem;line-height:1.55;color:var(--faint)}
 .admin .errors{margin:7px 0 0;padding:0;list-style:none;font-size:.82rem;color:#e5484d}

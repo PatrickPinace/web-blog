@@ -10,6 +10,7 @@
 
     <div class="toolbar">
       <a class="button-like" href="{{ url_for('admin.post_new') }}">+ Nowy wpis</a>
+      <a class="button-like" href="{{ url_for('admin.labels') }}">Znaczki</a>
       <span class="filters">
         <a class="{{ 'is-active' if not status_filter }}"
            href="{{ url_for('admin.dashboard') }}">wszystkie</a>
@@ -35,6 +36,9 @@
               <td>
                 {{ post.title }}
                 {% if post.is_concept %}<span class="flag"><span class="dot"></span>koncepcyjny</span>{% endif %}
+                {% for label in post.labels %}
+                  <span class="flag flag--{{ label.color }}"><span class="dot"></span>{{ label.name }}</span>
+                {% endfor %}
               </td>
               <td>{{ post.kind }}{% if post.branch %} · {{ post.branch }}{% endif %}</td>
               <td>

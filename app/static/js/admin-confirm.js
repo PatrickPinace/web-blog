@@ -9,4 +9,11 @@
       event.preventDefault();
     }
   });
+
+  document.addEventListener("change", function (event) {
+    var form = event.target.closest("[data-submit-on-change]");
+    if (form) {
+      form.requestSubmit();
+    }
+  });
 })();

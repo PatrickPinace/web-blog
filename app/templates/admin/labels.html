@@ -1,0 +1,78 @@
+{% extends "base.html" %}
+
+{% block title %}Znaczki — {{ config.BLOG_TITLE }}{% endblock %}
+{% block body_class %}is-admin{% endblock %}
+
+{% block content %}
+<main class="wrap">
+  <div class="admin admin--wide">
+    <div class="toolbar">
+      <a href="{{ url_for('admin.dashboard') }}">&larr; Panel</a>
+    </div>
+
+    <h1>Znaczki</h1>
+    <p class="subtitle">Wyróżnione oznaczenia wpisu, niezależne od tagów
+      tematycznych — np. „Eksperyment” albo „Do aktualizacji”. Wybierasz je
+      przy edycji wpisu z listy poniżej.</p>
+
+    <form method="post" novalidate style="max-width:420px">
+      {{ form.hidden_tag() }}
+      <div class="field">
+        {{ form.name.label }}
+        {{ form.name(placeholder="np. Eksperyment") }}
+        {% if form.name.errors %}
+          <ul class="errors">{% for error in form.name.errors %}<li>{{ error }}</li>{% endfor %}</ul>
+        {% endif %}
+      </div>
+      <div class="field">
+        {{ form.color.label }}
+        {{ form.color() }}
+      </div>
+      <div class="actions">
+        <button class="btn btn-primary" type="submit">Dodaj znaczek</button>
+      </div>
+    </form>
+
+    {% if labels %}
+      <table style="margin-top:32px">
+        <thead>
+          <tr><th>Znaczek</th><th>Kolor</th><th>Wpisów</th><th>Akcje</th></tr>
+        </thead>
+        <tbody>
+          {% for label in labels %}
+            <tr>
+              <td><span class="flag flag--{{ label.color }}"><span class="dot"></span>{{ label.name }}</span></td>
+              <td>
+                <form method="post" action="{{ url_for('admin.label_edit', label_id=label.id) }}"
+                      style="display:flex;gap:8px;align-items:center" data-submit-on-change>
+                  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                  <input type="hidden" name="name" value="{{ label.name }}">
+                  <select name="color">
+                    {% for c in label.COLORS %}
+                      <option value="{{ c }}" {{ 'selected' if c == label.color }}>{{ c }}</option>
+                    {% endfor %}
+                  </select>
+                </form>
+              </td>
+              <td>{{ label.posts|length }}</td>
+              <td>
+                <form action="{{ url_for('admin.label_delete', label_id=label.id) }}" method="post"
+                      style="display:inline" data-confirm="Usunąć znaczek „{{ label.name }}”?">
+                  {{ delete_form.hidden_tag() }}
+                  <button type="submit">Usuń</button>
+                </form>
+              </td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    {% else %}
+      <p style="margin-top:32px"><em>Brak znaczków. Dodaj pierwszy powyżej.</em></p>
+    {% endif %}
+  </div>
+</main>
+{% endblock %}
+
+{% block scripts %}
+  <script src="{{ url_for('static', filename='js/admin-confirm.js') }}"></script>
+{% endblock %}

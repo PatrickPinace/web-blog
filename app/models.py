@@ -15,6 +15,12 @@ post_tags = db.Table(
     db.Column("tag_id", db.Integer, db.ForeignKey("tag.id"), primary_key=True),
 )
 
+post_labels = db.Table(
+    "post_labels",
+    db.Column("post_id", db.Integer, db.ForeignKey("post.id"), primary_key=True),
+    db.Column("label_id", db.Integer, db.ForeignKey("label.id"), primary_key=True),
+)
+
 
 class User(UserMixin, db.Model):
     id = db.Column(db.Integer, primary_key=True)
@@ -85,6 +91,9 @@ class Post(db.Model):
     tags = db.relationship(
         "Tag", secondary=post_tags, back_populates="posts", order_by="Tag.name"
     )
+    labels = db.relationship(
+        "Label", secondary=post_labels, back_populates="posts", order_by="Label.name"
+    )
     images = db.relationship(
         "Image", back_populates="post", cascade="all, delete-orphan"
     )
@@ -111,6 +120,27 @@ class Tag(db.Model):
 
     def __repr__(self):
         return f"<Tag {self.slug!r}>"
+
+
+class Label(db.Model):
+    """Wyróżnione znaczki na wpisie (jak dawne `is_concept`), zarządzane
+    w panelu — inne niż Tag: nie opisują tematu, tylko sygnalizują coś
+    o samym wpisie ("eksperyment", "do aktualizacji"). `is_concept` na
+    Post to osobna, stała semantyka uczciwości i nie jest tym zastępowana.
+    """
+
+    COLORS = ("blue", "purple", "green", "amber", "red", "gray")
+    DEFAULT_COLOR = "blue"
+
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String(40), unique=True, nullable=False)
+    slug = db.Column(db.String(60), unique=True, nullable=False, index=True)
+    color = db.Column(db.String(20), nullable=False, default=DEFAULT_COLOR)
+
+    posts = db.relationship("Post", secondary=post_labels, back_populates="labels")
+
+    def __repr__(self):
+        return f"<Label {self.slug!r}>"
 
 
 class Image(db.Model):

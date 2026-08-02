@@ -4,11 +4,12 @@ from wtforms import (
     HiddenField,
     PasswordField,
     SelectField,
+    SelectMultipleField,
     StringField,
 )
 from wtforms.validators import DataRequired, Length, Optional
 
-from app.models import Post
+from app.models import Label, Post
 
 
 class LoginForm(FlaskForm):
@@ -36,6 +37,7 @@ class PostForm(FlaskForm):
         "Branża", validators=[Optional(), Length(max=80)]
     )
     is_concept = BooleanField("Projekt koncepcyjny (fikcyjny klient)")
+    labels = SelectMultipleField("Znaczki", coerce=int, validators=[Optional()])
     status = SelectField(
         "Status",
         choices=[
@@ -54,6 +56,21 @@ class PostForm(FlaskForm):
 
 
 class DeletePostForm(FlaskForm):
+    """Pusty formularz — wymuszamy CSRF na usuwaniu, jak każda destrukcyjna akcja."""
+
+    pass
+
+
+class LabelForm(FlaskForm):
+    name = StringField("Nazwa", validators=[DataRequired(), Length(max=40)])
+    color = SelectField(
+        "Kolor",
+        choices=[(c, c) for c in Label.COLORS],
+        default=Label.DEFAULT_COLOR,
+    )
+
+
+class DeleteLabelForm(FlaskForm):
     """Pusty formularz — wymuszamy CSRF na usuwaniu, jak każda destrukcyjna akcja."""
 
     pass

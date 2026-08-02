@@ -1,0 +1,50 @@
+{% extends "base.html" %}
+
+{% block title %}{% if query %}„{{ query }}” — szukaj{% else %}Szukaj{% endif %} — {{ config.BLOG_TITLE }}{% endblock %}
+{% block description %}Wyszukiwanie po tytułach, opisach i tagach wpisów.{% endblock %}
+
+{% block content %}
+<main class="wrap" style="padding-bottom:140px">
+  <div class="page" style="padding-top:88px;max-width:820px">
+    <h1>Szukaj</h1>
+    <form class="search-form" method="get" action="{{ url_for('public.search') }}">
+      <input type="search" name="q" value="{{ query }}" placeholder="tytuł, opis, tag…" autofocus>
+      <button type="submit">Szukaj</button>
+    </form>
+
+    {% if query %}
+      {% if results %}
+        <p class="search-summary">{{ results|length }}
+          {{ pluralize_pl(results|length, 'wynik', 'wyniki', 'wyników') }}
+          dla „{{ query }}”.</p>
+        <ol class="post-index">
+          {% for post in results %}
+            <li class="reveal">
+              <a class="row" href="{{ url_for('public.post_detail', slug=post.slug) }}">
+                <span class="wipe"></span>
+                <span class="num">{{ '%02d' % loop.index }}</span>
+                <span class="body">
+                  <span class="meta">
+                    <span class="kind">{{ post.kind }}</span>
+                    {% if post.branch %}<span class="branch">{{ post.branch }}</span>{% endif %}
+                  </span>
+                  <span class="title">{{ post.title }}</span>
+                  {% if post.excerpt %}<span class="lead">{{ post.excerpt }}</span>{% endif %}
+                </span>
+                <span class="side">
+                  <time datetime="{{ post.published_at.isoformat() }}">{{ post.published_at.strftime('%d.%m.%Y') }}</time>
+                  <span class="arrow">&rarr;</span>
+                </span>
+              </a>
+            </li>
+          {% endfor %}
+        </ol>
+      {% else %}
+        <p class="search-summary">Nic nie znaleziono dla „{{ query }}”.</p>
+      {% endif %}
+    {% else %}
+      <p class="search-summary">Wpisz szukaną frazę — przeszukujemy tytuły, krótkie opisy i tagi.</p>
+    {% endif %}
+  </div>
+</main>
+{% endblock %}

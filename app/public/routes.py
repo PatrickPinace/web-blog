@@ -1,4 +1,5 @@
 from flask import render_template, request
+from sqlalchemy.orm import joinedload
 
 from app.models import Post, Tag
 from app.public import public_bp
@@ -12,6 +13,7 @@ from app.public.queries import (
 )
 from app.utils.content import add_heading_ids
 from app.utils.embeds import render_embeds
+from app.utils.search import search_posts
 
 
 def render_post_body(post):
@@ -69,6 +71,30 @@ def tag_detail(slug):
         pagination=pagination,
         tags=Tag.query.order_by(Tag.name).all(),
     )
+
+
+@public_bp.route("/tagi")
+def tags():
+    """Pełna lista tagów jako punkt wejścia — inaczej trzeba je odkrywać
+    jeden po drugim, klikając na wpisy, które je mają."""
+    all_tags = (
+        Tag.query.filter(Tag.posts.any(status=Post.STATUS_PUBLISHED))
+        .order_by(Tag.name)
+        .all()
+    )
+    return render_template("public/tags.html", tags=all_tags)
+
+
+@public_bp.route("/szukaj")
+def search():
+    query = request.args.get("q", "").strip()
+    results = []
+    if query:
+        candidates = (
+            published_posts_query().options(joinedload(Post.tags)).all()
+        )
+        results = search_posts(candidates, query)
+    return render_template("public/search.html", query=query, results=results)
 
 
 @public_bp.route("/about")

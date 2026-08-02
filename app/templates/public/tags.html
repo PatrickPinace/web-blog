@@ -1,0 +1,21 @@
+{% extends "base.html" %}
+
+{% block title %}Tagi — {{ config.BLOG_TITLE }}{% endblock %}
+{% block description %}Wszystkie tagi używane na blogu.{% endblock %}
+
+{% block content %}
+<main class="wrap" style="padding-bottom:140px">
+  <div class="page" style="padding-top:88px">
+    <h1>Tagi</h1>
+    {% if tags %}
+      <nav class="tag-cloud">
+        {% for tag in tags %}
+          <a href="{{ url_for('public.tag_detail', slug=tag.slug) }}">{{ tag.name }}</a>
+        {% endfor %}
+      </nav>
+    {% else %}
+      <p><em>Żaden opublikowany wpis nie ma jeszcze tagu.</em></p>
+    {% endif %}
+  </div>
+</main>
+{% endblock %}

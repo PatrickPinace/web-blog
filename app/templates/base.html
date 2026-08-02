@@ -25,6 +25,8 @@
       </a>
       <nav class="site-nav">
         <a href="{{ url_for('public.index') }}">Wpisy</a>
+        <a href="{{ url_for('public.tags') }}">Tagi</a>
+        <a href="{{ url_for('public.search') }}">Szukaj</a>
         <a href="{{ url_for('public.about') }}">O blogu</a>
         {% if current_user.is_authenticated %}
           <a href="{{ url_for('admin.dashboard') }}">Panel</a>

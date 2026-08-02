@@ -160,3 +160,25 @@ class TestTagsRoute:
         body = response.get_data(as_text=True)
         assert "case-study" in body
         assert "nieużywany" not in body
+
+    def test_renders_filter_input_and_data_attrs_for_js(self, client, db, admin):
+        """main.js filtruje tagi po `data-tag-name` w [data-tag-cloud] —
+        bez tych atrybutów filtr renderuje się, ale nic nie robi."""
+        from app.models import Tag
+        from app.utils.slugify import slugify
+
+        tag = Tag(name="flask", slug=slugify("flask"))
+        db.session.add(tag)
+        post = Post(
+            title="Wpis", slug="wpis", body_source="", body_html="",
+            author_id=admin.id,
+        )
+        post.publish()
+        post.tags = [tag]
+        db.session.add(post)
+        db.session.commit()
+
+        body = client.get("/tagi").get_data(as_text=True)
+        assert "data-tag-filter" in body
+        assert "data-tag-cloud" in body
+        assert 'data-tag-name="flask"' in body

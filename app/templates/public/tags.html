@@ -8,11 +8,14 @@
   <div class="page" style="padding-top:88px">
     <h1>Tagi</h1>
     {% if tags %}
-      <nav class="tag-cloud">
+      <input type="search" class="tag-filter" placeholder="Filtruj tagi…"
+             aria-label="Filtruj tagi" data-tag-filter>
+      <nav class="tag-cloud" data-tag-cloud>
         {% for tag in tags %}
-          <a href="{{ url_for('public.tag_detail', slug=tag.slug) }}">{{ tag.name }}</a>
+          <a href="{{ url_for('public.tag_detail', slug=tag.slug) }}" data-tag-name="{{ tag.name }}">{{ tag.name }}</a>
         {% endfor %}
       </nav>
+      <p class="tag-filter-empty" data-tag-filter-empty hidden>Żaden tag nie odpowiada wpisanej frazie.</p>
     {% else %}
       <p><em>Żaden opublikowany wpis nie ma jeszcze tagu.</em></p>
     {% endif %}

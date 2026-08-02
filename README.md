@@ -1,5 +1,7 @@
 # web-blog
 
+[![CI](https://github.com/PatrickPinace/web-blog/actions/workflows/ci.yml/badge.svg)](https://github.com/PatrickPinace/web-blog/actions/workflows/ci.yml)
+
 Blog z panelem administracyjnym — Flask + PostgreSQL, renderowany po stronie
 serwera, z edytorem WYSIWYG i uploadem obrazków.
 
@@ -7,8 +9,8 @@ Projekt jest jednocześnie **działającym blogiem** i **template'em do reużyci
 konfiguracja przez zmienne środowiskowe, branding w jednym miejscu, instrukcja
 forka poniżej.
 
-> 🚧 **Status: w budowie.** Etap 0 z 8 (setup repozytorium).
-> Live URL pojawi się tutaj po wdrożeniu.
+> 🚧 **Status: w budowie.** Etap 5 z 8 (testy i hardening) ukończony,
+> deploy jeszcze nie wykonany. Live URL pojawi się tutaj po wdrożeniu.
 
 ---
 

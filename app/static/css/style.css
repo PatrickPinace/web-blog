@@ -43,7 +43,7 @@
 :root{
   --bg:#ffffff; --surface:#f6f7f9; --text:#15181d; --muted:#5d6672; --faint:#8b95a3;
   --line:#e5e8ec; --line-soft:#eef0f3; --accent:#1f6feb; --accent-soft:rgba(31,111,235,.10);
-  --grid:rgba(21,24,29,.055);
+  --grid:rgba(21,24,29,.03);
   /* Poświata tła w panelu (patrz body.is-admin). */
   --admin-glow:rgba(31,111,235,.07); --admin-tint:rgba(21,24,29,.028);
   --sans:"IBM Plex Sans",system-ui,-apple-system,sans-serif;
@@ -53,14 +53,14 @@
 html[data-theme="dark"]{
   --bg:#0b0e13; --surface:#141920; --text:#e5e9ef; --muted:#98a1ae; --faint:#6d7683;
   --line:#222932; --line-soft:#181e26; --accent:#5b9dff; --accent-soft:rgba(91,157,255,.14);
-  --grid:rgba(255,255,255,.045);
+  --grid:rgba(255,255,255,.03);
   --admin-glow:rgba(91,157,255,.10); --admin-tint:rgba(255,255,255,.022);
 }
 @media (prefers-color-scheme:dark){
   html:not([data-theme]){
     --bg:#0b0e13; --surface:#141920; --text:#e5e9ef; --muted:#98a1ae; --faint:#6d7683;
     --line:#222932; --line-soft:#181e26; --accent:#5b9dff; --accent-soft:rgba(91,157,255,.14);
-    --grid:rgba(255,255,255,.045);
+    --grid:rgba(255,255,255,.03);
     --admin-glow:rgba(91,157,255,.10); --admin-tint:rgba(255,255,255,.022);
   }
 }

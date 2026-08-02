@@ -120,6 +120,13 @@ class DeleteLabelForm(FlaskForm):
     pass
 
 
+class MergeLabelsForm(FlaskForm):
+    # source znika, wszystkie jego wpisy przechodzą na target — jak przy
+    # scalaniu tagów, kolejność (source, target) musi być czytelna w UI.
+    source_id = IntegerField(validators=[DataRequired()])
+    target_id = IntegerField(validators=[DataRequired()])
+
+
 class RenameTagForm(FlaskForm):
     name = StringField("Nazwa", validators=[DataRequired(), Length(max=80)])
 

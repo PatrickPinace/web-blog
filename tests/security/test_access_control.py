@@ -59,6 +59,7 @@ class TestAdminRequiresLogin:
             "/admin/tags/1/rename",
             "/admin/tags/1/delete",
             "/admin/tags/merge",
+            "/admin/labels/merge",
             "/admin/post/1/restore",
             "/admin/post/1/purge",
         ],

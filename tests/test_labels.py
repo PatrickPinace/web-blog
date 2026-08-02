@@ -69,6 +69,53 @@ class TestLabelCrud:
         assert post.labels == []
 
 
+class TestLabelMerge:
+    def test_merge_moves_posts_and_deletes_source(self, auth_client, db, admin):
+        source = _make_label(db, name="Eksperyment")
+        target = _make_label(db, name="Do aktualizacji")
+        post = Post(
+            title="Wpis", slug="wpis", body_source="", body_html="",
+            author_id=admin.id, labels=[source],
+        )
+        db.session.add(post)
+        db.session.commit()
+
+        auth_client.post(
+            "/admin/labels/merge",
+            data={"source_id": source.id, "target_id": target.id},
+        )
+        db.session.refresh(post)
+        assert db.session.get(Label, source.id) is None
+        assert {label.name for label in post.labels} == {"Do aktualizacji"}
+
+    def test_merge_does_not_duplicate_when_post_has_both_labels(self, auth_client, db, admin):
+        source = _make_label(db, name="Eksperyment")
+        target = _make_label(db, name="Do aktualizacji")
+        post = Post(
+            title="Wpis", slug="wpis", body_source="", body_html="",
+            author_id=admin.id, labels=[source, target],
+        )
+        db.session.add(post)
+        db.session.commit()
+
+        auth_client.post(
+            "/admin/labels/merge",
+            data={"source_id": source.id, "target_id": target.id},
+        )
+        db.session.refresh(post)
+        assert [label.name for label in post.labels] == ["Do aktualizacji"]
+
+    def test_merge_same_label_is_rejected(self, auth_client, db):
+        label = _make_label(db, name="Eksperyment")
+        response = auth_client.post(
+            "/admin/labels/merge",
+            data={"source_id": label.id, "target_id": label.id},
+            follow_redirects=True,
+        )
+        assert response.status_code == 200
+        assert db.session.get(Label, label.id) is not None
+
+
 class TestPostLabelAssignment:
     def test_assigning_labels_via_post_form(self, auth_client, db):
         label = _make_label(db, name="Eksperyment")

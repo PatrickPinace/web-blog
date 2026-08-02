@@ -13,7 +13,8 @@
     <h1>Znaczki</h1>
     <p class="subtitle">Wyróżnione oznaczenia wpisu, niezależne od tagów
       tematycznych — np. „Eksperyment” albo „Do aktualizacji”. Wybierasz je
-      przy edycji wpisu z listy poniżej.</p>
+      przy edycji wpisu z listy poniżej. Tutaj zmieniasz nazwę, kolor, scalasz
+      dwa podobne w jeden, albo usuwasz nieużywany.</p>
 
     <form method="post" novalidate style="max-width:420px">
       {{ form.hidden_tag() }}
@@ -33,15 +34,42 @@
       </div>
     </form>
 
+    {% if labels|length > 1 %}
+      <form method="post" action="{{ url_for('admin.label_merge') }}"
+            class="tag-merge" data-confirm="Scalić wybrane znaczki? Ta operacja jest nieodwracalna.">
+        {{ merge_form.hidden_tag() }}
+        <span>Scal</span>
+        <select name="source_id">
+          {% for label, count in labels %}
+            <option value="{{ label.id }}">{{ label.name }} ({{ count }})</option>
+          {% endfor %}
+        </select>
+        <span>do</span>
+        <select name="target_id">
+          {% for label, count in labels %}
+            <option value="{{ label.id }}">{{ label.name }} ({{ count }})</option>
+          {% endfor %}
+        </select>
+        <button class="button-like" type="submit">Scal</button>
+      </form>
+    {% endif %}
+
     {% if labels %}
-      <table style="margin-top:32px">
+      <table style="margin-top:26px">
         <thead>
           <tr><th>Znaczek</th><th>Kolor</th><th>Wpisów</th><th>Akcje</th></tr>
         </thead>
         <tbody>
-          {% for label in labels %}
+          {% for label, count in labels %}
             <tr>
-              <td><span class="flag flag--{{ label.color }}"><span class="dot"></span>{{ label.name }}</span></td>
+              <td>
+                <form method="post" action="{{ url_for('admin.label_edit', label_id=label.id) }}"
+                      class="tag-rename">
+                  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                  <input type="text" name="name" value="{{ label.name }}" maxlength="40">
+                  <button class="button-like" type="submit">Zapisz</button>
+                </form>
+              </td>
               <td>
                 <form method="post" action="{{ url_for('admin.label_edit', label_id=label.id) }}"
                       style="display:flex;gap:8px;align-items:center" data-submit-on-change>
@@ -54,7 +82,7 @@
                   </select>
                 </form>
               </td>
-              <td>{{ label.posts|length }}</td>
+              <td>{{ count }}</td>
               <td>
                 <form action="{{ url_for('admin.label_delete', label_id=label.id) }}" method="post"
                       style="display:inline" data-confirm="Usunąć znaczek „{{ label.name }}”?">

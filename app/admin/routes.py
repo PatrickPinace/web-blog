@@ -14,13 +14,24 @@ from app.admin.forms import (
     DeleteTagForm,
     LabelForm,
     LoginForm,
+    MergeLabelsForm,
     MergeTagsForm,
     PostForm,
     PostStatusForm,
     RenameTagForm,
 )
 from app.extensions import db, limiter
-from app.models import Image, Label, Post, PostActivity, Tag, User, post_tags, utcnow
+from app.models import (
+    Image,
+    Label,
+    Post,
+    PostActivity,
+    Tag,
+    User,
+    post_labels,
+    post_tags,
+    utcnow,
+)
 from app.public.queries import promote_scheduled_posts
 from app.public.routes import render_post_body
 from app.utils.embeds import build_youtube_placeholder
@@ -393,11 +404,19 @@ def labels():
             flash("Znaczek dodany.", "success")
         return redirect(url_for("admin.labels"))
 
-    all_labels = Label.query.order_by(Label.name).all()
+    all_labels = (
+        Label.query.outerjoin(post_labels, Label.id == post_labels.c.label_id)
+        .outerjoin(Post, Post.id == post_labels.c.post_id)
+        .with_entities(Label, func.count(Post.id))
+        .group_by(Label.id)
+        .order_by(Label.name)
+        .all()
+    )
     return render_template(
         "admin/labels.html",
         form=form,
         labels=all_labels,
+        merge_form=MergeLabelsForm(),
         delete_form=DeleteLabelForm(),
     )
 
@@ -413,7 +432,7 @@ def label_edit(label_id):
             Label.name == name, Label.id != label.id
         ).first()
         if existing is not None:
-            flash(f"Znaczek „{name}” już istnieje.", "error")
+            flash(f"Znaczek „{name}” już istnieje — użyj scalania zamiast zmiany nazwy.", "error")
         else:
             if name != label.name:
                 label.slug = unique_slug(
@@ -427,6 +446,32 @@ def label_edit(label_id):
             label.color = form.color.data
             db.session.commit()
             flash("Znaczek zapisany.", "success")
+    return redirect(url_for("admin.labels"))
+
+
+@admin_bp.route("/labels/merge", methods=["POST"])
+@login_required
+def label_merge():
+    form = MergeLabelsForm()
+    if not form.validate_on_submit():
+        abort(400)
+    if form.source_id.data == form.target_id.data:
+        flash("Wybierz dwa różne znaczki do scalenia.", "error")
+        return redirect(url_for("admin.labels"))
+
+    source = Label.query.get_or_404(form.source_id.data)
+    target = Label.query.get_or_404(form.target_id.data)
+
+    # Jak przy tagach: posty z OBOMA znacznikami dostałyby duplikat po prostym
+    # dopisaniu — przenosimy tylko z postów, które jeszcze nie mają target.
+    for post in list(source.posts):
+        if target not in post.labels:
+            post.labels.append(target)
+        post.labels.remove(source)
+
+    db.session.delete(source)
+    db.session.commit()
+    flash(f"Znaczek „{source.name}” scalony z „{target.name}”.", "success")
     return redirect(url_for("admin.labels"))
 
 

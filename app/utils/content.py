@@ -27,6 +27,22 @@ _ID_UNSAFE_RE = re.compile(r"[^a-z0-9]+")
 _PL_MAP = str.maketrans("ąćęłńóśźż", "acelnoszz")
 
 
+def pluralize_pl(count, singular, plural_few, plural_many):
+    """Polska odmiana liczebnikowa: 1 wpis, 2-4 wpisy, 5+ wpisów.
+
+    Reguła: forma "few" dla liczb kończących się na 2-4, ALE nie dla
+    11-14 (te idą do "many", jak w "11 wpisów", "22 wpisy", "112 wpisów").
+    Działa dla dowolnej nieujemnej liczby całkowitej, nie tylko < 100.
+    """
+    if count == 1:
+        return singular
+    last_two = count % 100
+    last_digit = count % 10
+    if last_digit in (2, 3, 4) and last_two not in (12, 13, 14):
+        return plural_few
+    return plural_many
+
+
 def strip_tags(html):
     """Goły tekst z fragmentu HTML — do liczenia słów i tekstu nagłówków."""
     if not html:

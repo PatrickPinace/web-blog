@@ -4,7 +4,7 @@
 testujemy go też pod kątem tego, czego wstawić NIE wolno.
 """
 
-from app.utils.content import add_heading_ids, read_time, strip_tags
+from app.utils.content import add_heading_ids, pluralize_pl, read_time, strip_tags
 
 
 class TestReadTime:
@@ -20,6 +20,34 @@ class TestReadTime:
         plain = read_time("<p>" + "slowo " * 400 + "</p>")
         marked = read_time("<p><strong>" + "slowo </strong><em>" * 400 + "</em></p>")
         assert plain == marked
+
+
+class TestPluralizePl:
+    def _forms(self, n):
+        return pluralize_pl(n, "wpis", "wpisy", "wpisów")
+
+    def test_one_is_singular(self):
+        assert self._forms(1) == "wpis"
+
+    def test_two_to_four_is_few(self):
+        assert [self._forms(n) for n in (2, 3, 4)] == ["wpisy"] * 3
+
+    def test_zero_and_five_plus_is_many(self):
+        assert self._forms(0) == "wpisów"
+        assert [self._forms(n) for n in (5, 6, 10, 11)] == ["wpisów"] * 4
+
+    def test_eleven_to_fourteen_is_many_not_few(self):
+        # Wyjątek od "ostatnia cyfra 2-4 => few": 12, 13, 14 mimo cyfry
+        # 2/3/4 na końcu idą do "many", tak samo jak 112, 113, 114.
+        assert [self._forms(n) for n in (12, 13, 14, 112, 113, 114)] == ["wpisów"] * 6
+
+    def test_twenty_two_is_few_again(self):
+        assert [self._forms(n) for n in (22, 23, 24, 122)] == ["wpisy"] * 4
+
+    def test_twenty_one_is_many_not_singular(self):
+        # W polskim "21 wpisów", NIE "21 wpis" - tylko dosłowne 1 jest liczbą
+        # pojedynczą, 21/31/... mimo końcówki 1 idą do formy "many".
+        assert self._forms(21) == "wpisów"
 
 
 class TestHeadingIds:

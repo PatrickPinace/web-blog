@@ -13,8 +13,8 @@
         jest ten blog.</p>
     </div>
     <div class="hero-stats reveal hide-md">
-      <span><b>{{ stats.posts }}</b> wpisów</span>
-      <span><b>{{ stats.branches }}</b> branż</span>
+      <span><b>{{ stats.posts }}</b> {{ pluralize_pl(stats.posts, 'wpis', 'wpisy', 'wpisów') }}</span>
+      <span><b>{{ stats.branches }}</b> {{ pluralize_pl(stats.branches, 'branża', 'branże', 'branż') }}</span>
     </div>
   </section>
 

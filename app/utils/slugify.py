@@ -3,10 +3,17 @@ import unicodedata
 
 _SLUG_STRIP_RE = re.compile(r"[^a-z0-9]+")
 
+# "ł" nie ma dekompozycji diakrytycznej w Unicode (to osobna litera, nie
+# "l" + ogonek) — normalize("NFKD") jej nie rozbija, więc encode("ascii",
+# "ignore") po prostu ją wyrzuca zamiast zamienić na "l". Znaleziono na
+# tytule zawierającym "wzięła" -> slug "wzięa". Reszta polskich znaków
+# (ą, ć, ę, ń, ó, ś, ź, ż) ma dekompozycję i przechodzi przez NFKD poprawnie.
+_PRE_MAP = str.maketrans("łŁ", "lL")
+
 
 def slugify(text):
     """Zamienia tytuł na slug URL, z obsługą polskich znaków (np. ą → a)."""
-    normalized = unicodedata.normalize("NFKD", text)
+    normalized = unicodedata.normalize("NFKD", text.translate(_PRE_MAP))
     ascii_text = normalized.encode("ascii", "ignore").decode("ascii")
     slug = _SLUG_STRIP_RE.sub("-", ascii_text.lower()).strip("-")
     return slug or "wpis"

@@ -141,6 +141,7 @@ img{max-width:100%;display:block}
 .row .lead{display:block;margin-top:8px;font-size:.96rem;line-height:1.6;color:var(--muted);max-width:600px}
 .row .side{position:relative;z-index:1;display:flex;align-items:center;gap:14px;padding-top:6px}
 .row time{font-family:var(--mono);font-size:.72rem;color:var(--faint);white-space:nowrap}
+.row .read-time{font-family:var(--mono);font-size:.68rem;color:var(--faint);white-space:nowrap}
 .row .arrow{font-family:var(--mono);font-size:.85rem;color:var(--accent);opacity:0;transform:translateX(-8px);transition:opacity .35s,transform .35s}
 .row:hover .arrow{opacity:1;transform:none}
 

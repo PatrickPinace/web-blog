@@ -34,7 +34,8 @@ class Post(db.Model):
 
     KIND_CASE_STUDY = "realizacja"
     KIND_NOTE = "notatka"
-    KINDS = (KIND_CASE_STUDY, KIND_NOTE)
+    KIND_ESSAY = "felieton"
+    KINDS = (KIND_CASE_STUDY, KIND_NOTE, KIND_ESSAY)
 
     id = db.Column(db.Integer, primary_key=True)
     title = db.Column(db.String(200), nullable=False)

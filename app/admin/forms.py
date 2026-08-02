@@ -28,6 +28,7 @@ class PostForm(FlaskForm):
         choices=[
             (Post.KIND_CASE_STUDY, "Realizacja"),
             (Post.KIND_NOTE, "Notatka techniczna"),
+            (Post.KIND_ESSAY, "Felieton"),
         ],
         default=Post.KIND_CASE_STUDY,
     )

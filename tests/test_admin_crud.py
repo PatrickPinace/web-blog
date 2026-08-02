@@ -174,6 +174,21 @@ class TestPostMetadataFields:
         assert post.is_concept is False
         assert post.branch is None
 
+    def test_essay_kind_is_accepted(self, auth_client, db):
+        # Trzeci kind (obok realizacja/notatka) — wpisy niezwiązane z ofertą
+        # web-dev, mają pokazać, że silnik obsługuje też długie, swobodne
+        # teksty, nie tylko krótkie case studies.
+        auth_client.post(
+            "/admin/post/new",
+            data={
+                "title": "Felieton", "excerpt": "e", "tags": "",
+                "kind": Post.KIND_ESSAY, "status": "draft",
+                "body_source": "<p>x</p>",
+            },
+        )
+        post = Post.query.filter_by(title="Felieton").first()
+        assert post.kind == Post.KIND_ESSAY
+
     def test_kind_rejects_value_outside_choices(self, auth_client, db):
         auth_client.post(
             "/admin/post/new",

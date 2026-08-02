@@ -25,6 +25,7 @@
             </span>
             <span class="side">
               <time datetime="{{ post.published_at.isoformat() }}">{{ post.published_at.strftime('%d.%m.%Y') }}</time>
+              <span class="read-time">{{ post.body_html | read_time }} min</span>
               <span class="arrow">&rarr;</span>
             </span>
           </a>

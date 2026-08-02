@@ -27,10 +27,26 @@
           {% for tag in tags %}
             <a href="{{ url_for('public.tag_detail', slug=tag.slug) }}">{{ tag.name }}</a>
           {% endfor %}
+          {% if tags %}<a href="{{ url_for('public.tags') }}" class="filters-more">wszystkie tagi →</a>{% endif %}
         </nav>
       </div>
 
-      {{ post_list(pagination, "public.index") }}
+      {% if branches %}
+        {# Filtr po branży — osobny wymiar od tagów, jeden na raz. Widoczny
+           tylko gdy jest co filtrować: przy jednej branży nie ma sensu
+           pokazywać przełącznika z jedną opcją. #}
+        {% if branches|length > 1 %}
+          <nav class="filters filters--branch">
+            <a class="{{ 'is-active' if not active_branch }}" href="{{ url_for('public.index') }}">wszystkie branże</a>
+            {% for b in branches %}
+              <a class="{{ 'is-active' if active_branch == b.name }}"
+                 href="{{ url_for('public.index', branza=b.name) }}">{{ b.name }} ({{ b.count }})</a>
+            {% endfor %}
+          </nav>
+        {% endif %}
+      {% endif %}
+
+      {{ post_list(pagination, "public.index", {"branza": active_branch} if active_branch else {}) }}
     </div>
 
     {# Podgląd wypełniany po najechaniu na wiersz (main.js). Bez JS zostaje

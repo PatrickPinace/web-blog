@@ -7,8 +7,10 @@ from app.public.feed import build_rss_feed
 from app.public.queries import (
     POSTS_PER_PAGE,
     get_blog_stats,
+    get_branches,
     get_neighbours,
     get_published_post_or_404,
+    get_top_tags,
     published_posts_query,
 )
 from app.utils.content import add_heading_ids
@@ -30,13 +32,19 @@ def render_post_body(post):
 @public_bp.route("/")
 def index():
     page = request.args.get("page", 1, type=int)
-    pagination = published_posts_query().paginate(
-        page=page, per_page=POSTS_PER_PAGE, error_out=False
-    )
+    branch = request.args.get("branza", "").strip()
+
+    query = published_posts_query()
+    if branch:
+        query = query.filter(Post.branch == branch)
+
+    pagination = query.paginate(page=page, per_page=POSTS_PER_PAGE, error_out=False)
     return render_template(
         "public/index.html",
         pagination=pagination,
-        tags=Tag.query.order_by(Tag.name).all(),
+        tags=get_top_tags(),
+        branches=get_branches(),
+        active_branch=branch,
         stats=get_blog_stats(),
     )
 
@@ -65,11 +73,20 @@ def tag_detail(slug):
         .filter(Post.tags.any(id=tag.id))
         .paginate(page=page, per_page=POSTS_PER_PAGE, error_out=False)
     )
+
+    top_tags = get_top_tags()
+    # Wybrany tag musi być widoczny jako aktywny filtr na własnej stronie,
+    # nawet jeśli nie należy do top N — inaczej pasek filtrów "gubi"
+    # aktualnie przeglądany tag, jeśli ktoś trafił tu z linku spoza top N
+    # (np. z /tagi albo bezpośredniego adresu).
+    if tag not in top_tags:
+        top_tags = [*top_tags, tag]
+
     return render_template(
         "public/tag_detail.html",
         tag=tag,
         pagination=pagination,
-        tags=Tag.query.order_by(Tag.name).all(),
+        tags=top_tags,
     )
 
 

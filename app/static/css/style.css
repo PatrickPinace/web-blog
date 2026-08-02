@@ -365,10 +365,17 @@ img{max-width:100%;display:block}
   border:1px dashed var(--accent);background:var(--accent-soft);
   font-family:var(--mono);font-size:.74rem;letter-spacing:.04em;color:var(--text)}
 
-/* Wpis koncepcyjny — jawne oznaczenie, że klient jest fikcyjny. */
-.flag{display:inline-flex;align-items:center;gap:7px;font-family:var(--mono);
-  font-size:.66rem;letter-spacing:.08em;text-transform:uppercase;color:var(--accent)}
+/* Wpis koncepcyjny — jawne oznaczenie, że klient jest fikcyjny. Ta druga
+   definicja .flag (bez tła/paddingu) nadpisuje tę z linii ~204. */
+.flag{display:inline-flex;align-items:center;gap:7px;
+  font-family:var(--mono);font-size:.66rem;letter-spacing:.08em;
+  text-transform:uppercase;color:var(--accent)}
 .flag .dot{width:5px;height:5px;border-radius:50%;background:var(--accent)}
+/* W wierszu tabeli dashboardu tytuł już nie zawija się (kolumna szeroka),
+   więc bez odstępu flaga stykałaby się z ostatnim słowem tytułu. Na stronie
+   publicznej .flag stoi jako pierwszy element .post-meta — tam odstęp
+   od lewej byłby błędem, więc margines tylko w tym konkretnym kontekście. */
+.admin td .flag{margin-left:10px}
 
 /* ---------- panel administracyjny ---------- */
 /* Panel widzi jedna osoba, ale to nie powód, żeby był brzydki. Zasada:
@@ -376,7 +383,11 @@ img{max-width:100%;display:block}
    a Quill dostaje pełny restyling, bo jego domyślne style są jasne
    i rozjeżdżają się z ciemnym motywem. */
 .admin{max-width:var(--measure);padding:56px 0 120px}
-.admin.admin--wide{max-width:820px}
+/* Dashboard i formularz mają dużo poziomej treści (tabela, pola formularza) -
+   zwężanie ich do tej samej miary co artykuł (--measure, myślany pod czytanie
+   tekstu) sprawiało, że wyglądały jak ucięte sekcje na szerokim ekranie,
+   z dużym marginesem po prawej mimo że nagłówek strony sięga --wrap. */
+.admin.admin--wide{max-width:var(--wrap)}
 .admin h1{font-size:1.75rem;letter-spacing:-.025em;font-weight:600;margin:0 0 4px}
 .admin .subtitle{margin:0 0 34px;color:var(--faint);font-size:.9rem}
 

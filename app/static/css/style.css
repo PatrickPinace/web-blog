@@ -43,7 +43,8 @@
 :root{
   --bg:#ffffff; --surface:#f6f7f9; --text:#15181d; --muted:#5d6672; --faint:#8b95a3;
   --line:#e5e8ec; --line-soft:#eef0f3; --accent:#1f6feb; --accent-soft:rgba(31,111,235,.10);
-  --grid:rgba(21,24,29,.03);
+  /* Dwie poświaty strony publicznej, przenikające się w tle (patrz body). */
+  --glow-a:rgba(31,111,235,.08); --glow-b:rgba(180,90,220,.07);
   /* Poświata tła w panelu (patrz body.is-admin). */
   --admin-glow:rgba(31,111,235,.07); --admin-tint:rgba(21,24,29,.028);
   --sans:"IBM Plex Sans",system-ui,-apple-system,sans-serif;
@@ -53,31 +54,45 @@
 html[data-theme="dark"]{
   --bg:#0b0e13; --surface:#141920; --text:#e5e9ef; --muted:#98a1ae; --faint:#6d7683;
   --line:#222932; --line-soft:#181e26; --accent:#5b9dff; --accent-soft:rgba(91,157,255,.14);
-  --grid:rgba(255,255,255,.03);
+  --glow-a:rgba(91,157,255,.09); --glow-b:rgba(190,110,240,.07);
   --admin-glow:rgba(91,157,255,.10); --admin-tint:rgba(255,255,255,.022);
 }
 @media (prefers-color-scheme:dark){
   html:not([data-theme]){
     --bg:#0b0e13; --surface:#141920; --text:#e5e9ef; --muted:#98a1ae; --faint:#6d7683;
     --line:#222932; --line-soft:#181e26; --accent:#5b9dff; --accent-soft:rgba(91,157,255,.14);
-    --grid:rgba(255,255,255,.03);
+    --glow-a:rgba(91,157,255,.09); --glow-b:rgba(190,110,240,.07);
     --admin-glow:rgba(91,157,255,.10); --admin-tint:rgba(255,255,255,.022);
   }
 }
 
 *{box-sizing:border-box}
 html,body{margin:0;padding:0}
+/* Jeden ciągły klimat od góry do dołu CAŁEGO dokumentu, nie tylko
+   pierwszego ekranu - rozmiar gradientów w % wysokości `html`, żeby się
+   nie "urywały" na długich wpisach tak, jak działoby się z px/vh.
+   Tło na <html>, nie na <body>: <body> ma tylko wysokość widocznej
+   treści przy krótkich stronach, <html> rozciąga się z całym dokumentem. */
+html{
+  background:var(--bg);
+  background-image:
+    radial-gradient(80% 60% at 12% 0%, var(--glow-a), transparent 68%),
+    radial-gradient(75% 70% at 100% 45%, var(--glow-b), transparent 68%);
+  background-repeat:no-repeat;
+}
 body{
-  background:var(--bg);color:var(--text);font-family:var(--sans);font-size:17px;line-height:1.7;
+  background:transparent;color:var(--text);font-family:var(--sans);font-size:17px;line-height:1.7;
   -webkit-font-smoothing:antialiased;
-  background-image:linear-gradient(var(--grid) 1px,transparent 1px),linear-gradient(90deg,var(--grid) 1px,transparent 1px);
-  background-size:64px 64px;
 }
 /* Panel: bez kratki. Na stronie publicznej siatka jest tłem dla rzadkiego
    tekstu i działa, ale pod gęstym formularzem robi się szum, który zjada
    czytelność pól. W zamian miękka poświata akcentu u góry — daje głębię,
    nie konkurując z treścią. */
-body.is-admin{background-image:none;background-attachment:fixed;
+/* `min-height:100vh` + `background-color` są tu konieczne: tło strony
+   publicznej żyje na <html> (patrz wyżej), a krótkie strony panelu (np.
+   login) mają <body> niższe niż okno - bez tego pod spodem prześwitywałby
+   przez <html> publiczny gradient. */
+body.is-admin{background-color:var(--bg);background-attachment:fixed;min-height:100vh;
   background-image:
     radial-gradient(1100px 520px at 50% -8%, var(--admin-glow), transparent 70%),
     linear-gradient(180deg, var(--admin-tint) 0%, transparent 340px)}

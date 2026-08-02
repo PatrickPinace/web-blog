@@ -7,16 +7,24 @@
   <div class="page">
     <h1>O blogu</h1>
     <div class="prose" style="margin-top:32px">
-      <p>Piszę tu o stronach dla małych firm: co klient dostaje, ile to trwa
-        i dlaczego niektóre rzeczy odradzam. Opisy realizacji są
-        <strong>koncepcyjne</strong> — powstały jako przykłady rozwiązań, nie
-        jako sprawozdania z płatnych zleceń. Każdy taki wpis ma to napisane
-        przy tytule.</p>
-      <p>Druga część bloga jest techniczna: notatki o tym, jak zbudowany jest
-        ten serwis — Flask, PostgreSQL, renderowanie po stronie serwera, treść
-        wpisu jako fragment HTML z edytora.</p>
+      <p>Nazywam się Michał Minor, robię strony i aplikacje webowe, od
+        wizytówek dla gabinetów i praktyk po pełne systemy z backendem
+        (Django, Flask) i wdrożeniem na własnym serwerze. Ten blog jest
+        częścią mojego portfolio, obok
+        <a href="https://github.com/PatrickPinace" rel="noopener">GitHuba</a>.</p>
+      <p>Pierwsza część bloga to opisy realizacji: co klient dostaje, jak
+        wygląda praca nad taką stroną i dlaczego czasem wybieram prostsze
+        rozwiązanie (statyczna strona bez CMS-a) od bardziej rozbudowanego.
+        Część z tych wpisów jest <strong>koncepcyjna</strong>, powstała jako
+        przykład rozwiązania, nie jako sprawozdanie z płatnego zlecenia.
+        Każdy taki wpis ma to napisane przy tytule.</p>
+      <p>Druga część jest techniczna: notatki o tym, jak zbudowany jest ten
+        serwis (Flask, PostgreSQL, renderowanie po stronie serwera, treść
+        wpisu jako fragment HTML z własnego edytora, wdrożenie w Dockerze).</p>
       <h2>Kontakt</h2>
-      <p>Najprościej mailem. Odpowiadam w ciągu dnia roboczego.</p>
+      <p>Najprościej mailem:
+        <a href="mailto:{{ config.BLOG_EMAIL }}">{{ config.BLOG_EMAIL }}</a>.
+        Odpowiadam w ciągu dnia roboczego.</p>
     </div>
     <p class="note">Blog działa na darmowym hostingu. Po dłuższej bezczynności
       serwer usypia, więc pierwsze wejście potrafi potrwać kilkanaście sekund —

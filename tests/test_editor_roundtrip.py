@@ -94,3 +94,23 @@ def test_mixed_formatting_survives_two_roundtrips(auth_client, db):
         "<ul>", "<li>", 'data-youtube-id="dQw4w9WgXcQ"',
     ]:
         assert fragment in second_pass
+
+
+def test_gallery_figure_and_figcaption_survive_roundtrip(auth_client, db):
+    # Dodane w sanitizer_version 3 — CSS na .gallery figure/figcaption
+    # istniał od wpięcia designu, ale sanitizer wycinał oba tagi
+    # (znalezione przy pisaniu pierwszego case study z galerią).
+    body = (
+        '<div class="gallery">'
+        "<figure><img src=\"https://res.cloudinary.com/demo/x.jpg\" alt=\"a\">"
+        "<figcaption>Podpis zdjęcia</figcaption></figure>"
+        "</div>"
+    )
+    post = _create(auth_client, body)
+    assert "<figure>" in post.body_html
+    assert "<figcaption>" in post.body_html
+
+    _resave(auth_client, post, post.body_source)
+    db.session.refresh(post)
+    assert "<figure>" in post.body_html
+    assert "<figcaption>" in post.body_html

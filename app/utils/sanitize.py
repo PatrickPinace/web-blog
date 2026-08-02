@@ -9,7 +9,7 @@ from bleach.sanitizer import Cleaner
 #
 # v1 (etap 4):  whitelist bazowa, bez klas Quilla i bez embedów.
 # v2 (etap 4a): klasy ql-* (filtrowane po wartości) + wrapper embedu YouTube.
-SANITIZER_VERSION = 2
+SANITIZER_VERSION = 3
 
 ALLOWED_TAGS = [
     "p", "h2", "h3", "h4",
@@ -18,6 +18,7 @@ ALLOWED_TAGS = [
     "blockquote", "code", "pre",
     "img", "br", "hr",
     "span", "div",
+    "figure", "figcaption",
     "table", "thead", "tbody", "tr", "th", "td", "caption",
     # UWAGA: `iframe` celowo NIE jest tu wymieniony i nie może zostać dodany.
     # Embed YouTube generuje serwer z zwalidowanego URL-a (app/utils/embeds.py),
@@ -35,6 +36,7 @@ ALLOWED_ATTRIBUTES = {
     # wzorcem w DataAttributeFilter, a na iframe zamienia go dopiero
     # render_embeds() przy wyświetlaniu (app/utils/embeds.py).
     "div": ["class", "data-youtube-id"],
+    "figure": ["class"],
     "h2": ["class"],
     "h3": ["class"],
     "h4": ["class"],

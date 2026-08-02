@@ -83,6 +83,20 @@
         });
       }, { rootMargin: '-100px 0px -65% 0px' });
       heads.forEach(function (h) { tio.observe(h); });
+
+      /* Krótka ostatnia sekcja może nigdy nie przekroczyć progu -65% od
+         dołu, więc scrollspy potrafi utknąć na przedostatnim linku mimo
+         dojechania do końca strony — przy samym dole wymuszamy ostatni. */
+      var lastLink = links[links.length - 1];
+      var atBottom = function () {
+        return window.innerHeight + window.scrollY >= document.documentElement.scrollHeight - 4;
+      };
+      window.addEventListener('scroll', function () {
+        if (!atBottom()) return;
+        Array.prototype.forEach.call(links, function (a) {
+          a.classList.toggle('active', a === lastLink);
+        });
+      }, { passive: true });
     }
 
     /* --- filtr tagów na żywo (/tagi), z fuzzy fallbackiem na literówkę ---

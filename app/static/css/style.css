@@ -231,21 +231,23 @@ img{max-width:100%;display:block}
 .post-header h1{margin:0;font-size:clamp(2.1rem,4.6vw,3.2rem);line-height:1.08;letter-spacing:-.04em;font-weight:600;text-wrap:balance}
 .post-header .lead{margin:28px 0 0;font-size:1.2rem;line-height:1.55;color:var(--muted);max-width:var(--measure);text-wrap:pretty}
 .rule{height:1px;background:var(--line);margin:52px 0 48px}
+.post-layout{display:grid;grid-template-columns:200px minmax(0,1fr);gap:64px;align-items:start}
 .post-body{max-width:var(--measure)}
 
-/* spis treści — karta pozioma na górze treści, nie sidebar sticky.
-   Wcześniej osobna kolumna grida obok .post-body: na krótkich wpisach
-   (2-3 nagłówki) z długą treścią, position:sticky "odczepiał się" wysoko
-   na ekranie z pustą przestrzenią pod spisem — mylące, choć techniczne
-   poprawne zachowanie sticky przy kolumnach różnej wysokości. Karta
-   rośnie z liczbą nagłówków, więc problem znika strukturalnie. */
-.toc{margin-bottom:48px;padding:20px 24px;border:1px solid var(--line-soft);border-radius:8px}
-.toc .label{display:block;font-family:var(--mono);font-size:.64rem;letter-spacing:.14em;text-transform:uppercase;color:var(--faint);margin-bottom:14px}
-.toc nav{display:flex;flex-wrap:wrap;gap:4px 22px}
-.toc a{font-size:.85rem;line-height:1.5;color:var(--faint);transition:color .25s}
+/* spis treści — sidebar sticky z podświetlaniem aktualnej sekcji (main.js).
+   `max-height` + własny scroll zamiast gołego `position:sticky` — inaczej
+   na krótkich wpisach (2-3 nagłówki) z długą treścią sticky "odczepiał się"
+   wysoko na ekranie, zostawiając pustą przestrzeń pod spisem. Ograniczenie
+   wysokości do widocznego obszaru viewportu eliminuje to strukturalnie,
+   niezależnie od tego, ile nagłówków ma dany wpis. */
+.toc{position:sticky;top:104px;max-height:calc(100vh - 104px - 32px);overflow-y:auto}
+.toc .label{display:block;font-family:var(--mono);font-size:.64rem;letter-spacing:.14em;text-transform:uppercase;color:var(--faint);margin-bottom:12px}
+.toc nav{display:flex;flex-direction:column}
+.toc a{display:block;font-size:.82rem;line-height:1.4;color:var(--faint);padding:6px 0 6px 14px;
+  border-left:1px solid var(--line-soft);transition:color .25s,border-color .25s}
 .toc a:hover{color:var(--text)}
-.toc a.active{color:var(--accent)}
-.toc .tags{margin-top:16px;padding-top:16px;border-top:1px solid var(--line-soft);display:flex;flex-wrap:wrap;gap:8px 16px;
+.toc a.active{color:var(--accent);border-left-color:var(--accent)}
+.toc .tags{margin-top:24px;padding-top:16px;border-top:1px solid var(--line-soft);display:flex;flex-direction:column;gap:6px;
   font-family:var(--mono);font-size:.66rem;color:var(--faint)}
 
 /* nawigacja poprzedni/następny */
@@ -379,6 +381,7 @@ img{max-width:100%;display:block}
   .hide-md{display:none !important}
   .hero{grid-template-columns:1fr;padding:88px 0 72px}
   .index-layout{grid-template-columns:1fr}
+  .post-layout{grid-template-columns:1fr;gap:0}
 }
 @media (max-width:720px){
   .wrap{padding:0 20px}

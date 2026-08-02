@@ -36,9 +36,9 @@
 
   <div class="rule"></div>
 
-  <div class="post-body">
+  <div class="post-layout">
     {% if headings or post.tags %}
-      <aside class="toc">
+      <aside class="toc hide-md">
         {% if headings %}
           <span class="label">W tym wpisie</span>
           <nav>
@@ -57,30 +57,32 @@
       </aside>
     {% endif %}
 
-    {# `body_html` jest zsanityzowany przez bleach przy zapisie. Widok
-       przepuszcza go jeszcze przez render_embeds (placeholdery → zaufane
-       iframe'y) i add_heading_ids (kotwice do spisu treści) — patrz
-       render_post_body() w app/public/routes.py.
-       To JEDYNE miejsce w całym projekcie, gdzie wolno użyć `| safe`.
-       Nigdy na body_source ani na żadnym innym polu. #}
-    <article class="prose">{{ body_html | safe }}</article>
+    <div class="post-body">
+      {# `body_html` jest zsanityzowany przez bleach przy zapisie. Widok
+         przepuszcza go jeszcze przez render_embeds (placeholdery → zaufane
+         iframe'y) i add_heading_ids (kotwice do spisu treści) — patrz
+         render_post_body() w app/public/routes.py.
+         To JEDYNE miejsce w całym projekcie, gdzie wolno użyć `| safe`.
+         Nigdy na body_source ani na żadnym innym polu. #}
+      <article class="prose">{{ body_html | safe }}</article>
 
-    {% if prev_post or next_post %}
-      <nav class="post-nav">
-        {% if prev_post %}
-          <a href="{{ url_for('public.post_detail', slug=prev_post.slug) }}">
-            <span class="dir">&larr; Poprzedni</span>
-            <p>{{ prev_post.title }}</p>
-          </a>
-        {% else %}<span></span>{% endif %}
-        {% if next_post %}
-          <a class="next" href="{{ url_for('public.post_detail', slug=next_post.slug) }}">
-            <span class="dir">Następny &rarr;</span>
-            <p>{{ next_post.title }}</p>
-          </a>
-        {% endif %}
-      </nav>
-    {% endif %}
+      {% if prev_post or next_post %}
+        <nav class="post-nav">
+          {% if prev_post %}
+            <a href="{{ url_for('public.post_detail', slug=prev_post.slug) }}">
+              <span class="dir">&larr; Poprzedni</span>
+              <p>{{ prev_post.title }}</p>
+            </a>
+          {% else %}<span></span>{% endif %}
+          {% if next_post %}
+            <a class="next" href="{{ url_for('public.post_detail', slug=next_post.slug) }}">
+              <span class="dir">Następny &rarr;</span>
+              <p>{{ next_post.title }}</p>
+            </a>
+          {% endif %}
+        </nav>
+      {% endif %}
+    </div>
   </div>
 </main>
 {% endblock %}

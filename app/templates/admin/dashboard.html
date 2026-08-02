@@ -11,6 +11,9 @@
     <div class="dashboard-stats">
       <span><b>{{ stats.published_count }}</b> {{ pluralize_pl(stats.published_count, 'opublikowany', 'opublikowane', 'opublikowanych') }}</span>
       <span><b>{{ stats.draft_count }}</b> {{ pluralize_pl(stats.draft_count, 'szkic', 'szkice', 'szkiców') }}</span>
+      {% if stats.scheduled_count %}
+        <span><b>{{ stats.scheduled_count }}</b> {{ pluralize_pl(stats.scheduled_count, 'zaplanowany', 'zaplanowane', 'zaplanowanych') }}</span>
+      {% endif %}
       {% if stats.oldest_draft %}
         <span>najstarszy nieruszany:
           <a href="{{ url_for('admin.post_edit', post_id=stats.oldest_draft.id) }}">{{ stats.oldest_draft.title }}</a>
@@ -33,6 +36,8 @@
            href="{{ url_for('admin.dashboard', kind=kind_filter, branch=branch_filter, q=search_query) }}">wszystkie</a>
         <a class="{{ 'is-active' if status_filter == 'draft' }}"
            href="{{ url_for('admin.dashboard', status='draft', kind=kind_filter, branch=branch_filter, q=search_query) }}">szkice</a>
+        <a class="{{ 'is-active' if status_filter == 'scheduled' }}"
+           href="{{ url_for('admin.dashboard', status='scheduled', kind=kind_filter, branch=branch_filter, q=search_query) }}">zaplanowane</a>
         <a class="{{ 'is-active' if status_filter == 'published' }}"
            href="{{ url_for('admin.dashboard', status='published', kind=kind_filter, branch=branch_filter, q=search_query) }}">opublikowane</a>
       </span>
@@ -90,11 +95,20 @@
                 <form action="{{ url_for('admin.post_toggle_status', post_id=post.id) }}" method="post"
                       class="status-toggle">
                   {{ status_form.hidden_tag() }}
-                  <button type="submit"
-                          class="admin-status-toggle status status--{{ 'published' if post.is_published else 'draft' }}"
-                          title="{{ 'Cofnij do szkiców' if post.is_published else 'Opublikuj' }}">
-                    {{ 'Opublikowany' if post.is_published else 'Szkic' }}
-                  </button>
+                  {% if post.status == 'scheduled' %}
+                    <button type="submit"
+                            class="admin-status-toggle status status--scheduled"
+                            title="Publikuj teraz zamiast czekać na termin ({{ post.scheduled_for.strftime('%d.%m.%Y %H:%M') }})">
+                      Zaplanowany
+                    </button>
+                    <div class="admin-date">{{ post.scheduled_for.strftime('%d.%m.%Y %H:%M') }}</div>
+                  {% else %}
+                    <button type="submit"
+                            class="admin-status-toggle status status--{{ 'published' if post.is_published else 'draft' }}"
+                            title="{{ 'Cofnij do szkiców' if post.is_published else 'Opublikuj' }}">
+                      {{ 'Opublikowany' if post.is_published else 'Szkic' }}
+                    </button>
+                  {% endif %}
                 </form>
               </td>
               <td>

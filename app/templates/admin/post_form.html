@@ -120,7 +120,18 @@
 
       <fieldset class="admin-section admin-section--publish">
         <legend>Publikacja</legend>
-        {{ field(form.status) }}
+        <div class="field">
+          {{ form.status.label }}
+          {{ form.status(**{"data-schedule-toggle": "scheduled-for-field"}) }}
+        </div>
+        <div class="field" id="scheduled-for-field"
+             {{ 'hidden' if form.status.data != 'scheduled' }}>
+          {{ form.scheduled_for.label }}
+          {{ form.scheduled_for() }}
+          {% if form.scheduled_for.errors %}
+            <ul class="errors">{% for error in form.scheduled_for.errors %}<li>{{ error }}</li>{% endfor %}</ul>
+          {% endif %}
+        </div>
       </fieldset>
 
       <div class="actions">
@@ -136,4 +147,5 @@
   <script src="{{ url_for('static', filename='js/admin-editor.js') }}"></script>
   <script src="{{ url_for('static', filename='js/admin-tag-autocomplete.js') }}"></script>
   <script src="{{ url_for('static', filename='js/admin-dirty-guard.js') }}"></script>
+  <script src="{{ url_for('static', filename='js/admin-schedule-field.js') }}"></script>
 {% endblock %}

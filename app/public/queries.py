@@ -1,6 +1,7 @@
 from sqlalchemy import func
 
-from app.models import Post, Tag, post_tags
+from app.extensions import db
+from app.models import Post, Tag, post_tags, utcnow
 
 POSTS_PER_PAGE = 10
 
@@ -10,12 +11,34 @@ POSTS_PER_PAGE = 10
 TOP_TAGS_LIMIT = 8
 
 
+def promote_scheduled_posts():
+    """"Dojrzewa" zaplanowane wpisy, których termin już minął.
+
+    Zamiast Celery/cronu (hosting go nie udźwignie) — sprawdzane leniwie,
+    tuż przed każdym odczytem publicznej listy wpisów. Publish() ustawia
+    published_at i czyści scheduled_for, więc wpis staje się nieodróżnialny
+    od opublikowanego ręcznie.
+    """
+    due = Post.query.filter(
+        Post.status == Post.STATUS_SCHEDULED,
+        Post.scheduled_for.isnot(None),
+        Post.scheduled_for <= utcnow(),
+        Post.deleted_at.is_(None),
+    ).all()
+    if not due:
+        return
+    for post in due:
+        post.publish()
+    db.session.commit()
+
+
 def published_posts_query():
     """Bazowe zapytanie o wpisy widoczne publicznie.
 
     Cały ruch publiczny MUSI przechodzić przez tę funkcję — draft nie może
     wyciec przez żadną publiczną ścieżkę, nawet po zgadnięciu sluga.
     """
+    promote_scheduled_posts()
     return Post.query.filter_by(
         status=Post.STATUS_PUBLISHED, deleted_at=None
     ).order_by(Post.published_at.desc())

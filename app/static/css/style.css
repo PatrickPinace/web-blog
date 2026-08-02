@@ -481,12 +481,14 @@ img{max-width:100%;display:block}
 .admin label{display:block;margin:0 0 7px;font-family:var(--mono);font-size:.68rem;
   letter-spacing:.09em;text-transform:uppercase;color:var(--muted)}
 
-.admin input[type=text],.admin input[type=password],.admin textarea,.admin select{
+.admin input[type=text],.admin input[type=password],.admin input[type=datetime-local],
+.admin textarea,.admin select{
   width:100%;padding:11px 13px;font-family:var(--sans);font-size:.95rem;color:var(--text);
   background:var(--surface);border:1px solid var(--line);border-radius:7px;
   transition:border-color .18s ease,box-shadow .18s ease,background-color .18s ease}
 .admin input[type=text]:hover,.admin input[type=password]:hover,
-.admin textarea:hover,.admin select:hover{border-color:var(--faint)}
+.admin input[type=datetime-local]:hover,.admin textarea:hover,.admin select:hover{
+  border-color:var(--faint)}
 .admin input::placeholder,.admin textarea::placeholder{color:var(--faint)}
 /* Pierścień focusu zamiast outline'u — nie skacze layout, widać wyraźnie. */
 .admin input:focus,.admin textarea:focus,.admin select:focus{
@@ -533,6 +535,7 @@ img{max-width:100%;display:block}
   display:inline-block;padding:3px 9px;border-radius:99px;border:1px solid var(--line)}
 .admin .status--draft{color:var(--faint)}
 .admin .status--published{color:var(--accent);border-color:var(--accent-soft);background:var(--accent-soft)}
+.admin .status--scheduled{color:var(--label-amber);border-color:var(--label-amber)}
 /* Status jest teraz też przyciskiem (przełącznik szkic/opublikowany z listy) —
    reset domyślnych stylów <button>, żeby wyglądał identycznie jak wcześniej.
    Selektor .admin td button.admin-status-toggle (nie tylko button.admin-status-toggle)

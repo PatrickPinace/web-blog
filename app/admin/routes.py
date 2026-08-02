@@ -21,6 +21,7 @@ from app.admin.forms import (
 )
 from app.extensions import db, limiter
 from app.models import Image, Label, Post, Tag, User, post_tags, utcnow
+from app.public.queries import promote_scheduled_posts
 from app.public.routes import render_post_body
 from app.utils.embeds import build_youtube_placeholder
 from app.utils.sanitize import SANITIZER_VERSION, sanitize_html
@@ -65,6 +66,7 @@ def logout():
 @admin_bp.route("/")
 @login_required
 def dashboard():
+    promote_scheduled_posts()
     status_filter = request.args.get("status")
     kind_filter = request.args.get("kind")
     branch_filter = request.args.get("branch")
@@ -73,7 +75,7 @@ def dashboard():
     query = Post.query.filter(Post.deleted_at.is_(None)).order_by(
         Post.created_at.desc()
     )
-    if status_filter in (Post.STATUS_DRAFT, Post.STATUS_PUBLISHED):
+    if status_filter in (Post.STATUS_DRAFT, Post.STATUS_SCHEDULED, Post.STATUS_PUBLISHED):
         query = query.filter_by(status=status_filter)
     if kind_filter in Post.KINDS:
         query = query.filter_by(kind=kind_filter)
@@ -201,6 +203,9 @@ def _dashboard_stats():
     published_count = Post.query.filter(
         not_deleted, Post.status == Post.STATUS_PUBLISHED
     ).count()
+    scheduled_count = Post.query.filter(
+        not_deleted, Post.status == Post.STATUS_SCHEDULED
+    ).count()
     trash_count = Post.query.filter(Post.deleted_at.isnot(None)).count()
     oldest_draft = (
         Post.query.filter(not_deleted, Post.status == Post.STATUS_DRAFT)
@@ -218,6 +223,7 @@ def _dashboard_stats():
     return {
         "draft_count": draft_count,
         "published_count": published_count,
+        "scheduled_count": scheduled_count,
         "trash_count": trash_count,
         "oldest_draft": oldest_draft,
         "oldest_draft_days": oldest_draft_days,
@@ -319,6 +325,12 @@ def post_toggle_status(post_id):
     if post.is_published:
         post.unpublish()
         flash("Wpis wrócił do szkiców.", "success")
+    elif post.status == Post.STATUS_SCHEDULED:
+        # Szybki przełącznik z dashboardu jest binarny — planowanie z wyborem
+        # daty żyje tylko w formularzu edycji. Kliknięcie tutaj na zaplanowanym
+        # wpisie anuluje harmonogram i publikuje od razu, zamiast go ignorować.
+        post.publish()
+        flash("Wpis opublikowany od razu, harmonogram anulowany.", "success")
     else:
         post.publish()
         flash("Wpis opublikowany.", "success")
@@ -546,9 +558,17 @@ def _apply_form_to_post(form, post, is_new):
 
     post.tags = _resolve_tags(form.tags.data)
 
-    post.status = form.status.data
-    if post.status == Post.STATUS_PUBLISHED and not was_published:
-        post.publish()
+    new_status = form.status.data
+    if new_status == Post.STATUS_SCHEDULED:
+        # DateTimeLocalField daje naiwny datetime — kolumna jest
+        # DateTime(timezone=True), więc doczepiamy UTC jawnie (formularz
+        # traktuje czas lokalny przeglądarki jako UTC, patrz walidator).
+        post.schedule(form.scheduled_for.data.replace(tzinfo=UTC))
+    elif new_status == Post.STATUS_PUBLISHED:
+        if not was_published:
+            post.publish()
+    else:
+        post.unpublish()
 
 
 def _resolve_tags(raw_tags):

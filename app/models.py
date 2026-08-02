@@ -36,6 +36,7 @@ class User(UserMixin, db.Model):
 
 class Post(db.Model):
     STATUS_DRAFT = "draft"
+    STATUS_SCHEDULED = "scheduled"
     STATUS_PUBLISHED = "published"
 
     KIND_CASE_STUDY = "realizacja"
@@ -80,6 +81,12 @@ class Post(db.Model):
     )
     published_at = db.Column(db.DateTime(timezone=True), nullable=True)
 
+    # Kiedy wpis ma się sam opublikować. Sprawdzane leniwie — patrz
+    # promote_scheduled_posts() w app/public/queries.py — nie ma osobnego
+    # procesu (Celery/cron), bo hosting go nie udźwignie. Wystarczy, że wpis
+    # "dojrzewa" przy najbliższym publicznym odczycie listy wpisów po terminie.
+    scheduled_for = db.Column(db.DateTime(timezone=True), nullable=True)
+
     created_at = db.Column(db.DateTime(timezone=True), default=utcnow, nullable=False)
     updated_at = db.Column(
         db.DateTime(timezone=True), default=utcnow, onupdate=utcnow, nullable=False
@@ -114,8 +121,11 @@ class Post(db.Model):
     def soft_delete(self):
         # STATUS_DRAFT na wszelki wypadek — usunięty wpis nie ma prawa
         # przejść przez published_posts_query() nawet gdyby ktoś kiedyś
-        # zapomniał dopisać filtra po deleted_at.
+        # zapomniał dopisać filtra po deleted_at. scheduled_for czyścimy
+        # z tego samego powodu co przy unpublish — bez tego kosz pokazywałby
+        # mylącą, nieaktualną datę planowanej publikacji.
         self.status = self.STATUS_DRAFT
+        self.scheduled_for = None
         self.deleted_at = utcnow()
 
     def restore(self):
@@ -125,11 +135,17 @@ class Post(db.Model):
         if self.published_at is None:
             self.published_at = utcnow()
         self.status = self.STATUS_PUBLISHED
+        self.scheduled_for = None
 
     def unpublish(self):
         # published_at zostaje nietknięte — to data PIERWSZEJ publikacji,
         # nie flaga "aktualnie widoczny". Ponowna publikacja jej nie zmienia.
         self.status = self.STATUS_DRAFT
+        self.scheduled_for = None
+
+    def schedule(self, when):
+        self.status = self.STATUS_SCHEDULED
+        self.scheduled_for = when
 
     def __repr__(self):
         return f"<Post {self.slug!r} ({self.status})>"

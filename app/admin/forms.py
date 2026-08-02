@@ -1,6 +1,7 @@
 from flask_wtf import FlaskForm
 from wtforms import (
     BooleanField,
+    DateTimeLocalField,
     HiddenField,
     IntegerField,
     PasswordField,
@@ -8,9 +9,9 @@ from wtforms import (
     SelectMultipleField,
     StringField,
 )
-from wtforms.validators import DataRequired, Length, Optional
+from wtforms.validators import DataRequired, Length, Optional, ValidationError
 
-from app.models import Label, Post
+from app.models import Label, Post, utcnow
 
 
 class LoginForm(FlaskForm):
@@ -43,9 +44,17 @@ class PostForm(FlaskForm):
         "Status",
         choices=[
             (Post.STATUS_DRAFT, "Szkic"),
+            (Post.STATUS_SCHEDULED, "Zaplanowany"),
             (Post.STATUS_PUBLISHED, "Opublikowany"),
         ],
         validators=[DataRequired()],
+    )
+    # Bez Optional(): ten validator rzuca StopValidation na pustym polu,
+    # co ucinałoby validate_scheduled_for poniżej zanim zdąży sprawdzić,
+    # że status=scheduled bez daty jest błędem. Puste pole samo w sobie
+    # nie jest błędem — to właśnie decyduje validate_scheduled_for.
+    scheduled_for = DateTimeLocalField(
+        "Data i godzina publikacji", format="%Y-%m-%dT%H:%M", validators=[]
     )
     tags = StringField(
         "Tagi (oddzielone przecinkiem)", validators=[Length(max=300)]
@@ -54,6 +63,19 @@ class PostForm(FlaskForm):
     # NIGDY tutaj — walidator formularza nie jest miejscem na bezpieczeństwo
     # treści, bo łatwo o nim zapomnieć przy zmianie formularza.
     body_source = HiddenField("Treść")
+
+    def validate_scheduled_for(self, field):
+        if self.status.data != Post.STATUS_SCHEDULED:
+            return
+        if field.data is None:
+            raise ValidationError("Podaj datę i godzinę publikacji.")
+        # DateTimeLocalField zwraca naiwny datetime (bez strefy) — pole
+        # w formularzu to czas lokalny przeglądarki, traktowany jako UTC
+        # (blog jednoosobowy, bez wyboru strefy w UI; patrz też known-issues
+        # o naiwnych datach z SQLite — ten sam wzorzec porównania).
+        naive_now = utcnow().replace(tzinfo=None)
+        if field.data <= naive_now:
+            raise ValidationError("Data publikacji musi być w przyszłości.")
 
 
 class DeletePostForm(FlaskForm):

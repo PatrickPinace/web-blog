@@ -1,0 +1,27 @@
+"""post: scheduled_for (harmonogram publikacji)
+
+Revision ID: 0005
+Revises: 0004
+Create Date: 2026-08-02
+
+Nowy status "scheduled" (obok draft/published) i kolumna scheduled_for —
+wpis publikuje się sam, sprawdzane leniwie przy najbliższym publicznym
+odczycie listy wpisów (promote_scheduled_posts), bez Celery/cron.
+"""
+from alembic import op
+import sqlalchemy as sa
+
+revision = "0005"
+down_revision = "0004"
+branch_labels = None
+depends_on = None
+
+
+def upgrade():
+    op.add_column(
+        "post", sa.Column("scheduled_for", sa.DateTime(timezone=True), nullable=True)
+    )
+
+
+def downgrade():
+    op.drop_column("post", "scheduled_for")

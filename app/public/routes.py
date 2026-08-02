@@ -11,6 +11,7 @@ from app.public.queries import (
     get_neighbours,
     get_published_post_or_404,
     get_top_tags,
+    promote_scheduled_posts,
     published_posts_query,
 )
 from app.utils.content import add_heading_ids
@@ -94,6 +95,7 @@ def tag_detail(slug):
 def tags():
     """Pełna lista tagów jako punkt wejścia — inaczej trzeba je odkrywać
     jeden po drugim, klikając na wpisy, które je mają."""
+    promote_scheduled_posts()
     all_tags = (
         Tag.query.filter(
             Tag.posts.any(status=Post.STATUS_PUBLISHED, deleted_at=None)

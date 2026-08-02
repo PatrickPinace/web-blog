@@ -678,3 +678,173 @@ class TestTrash:
         )
         db.session.refresh(post)
         assert post.is_concept is False
+
+
+class TestScheduledPublishing:
+    def _datetime_local(self, dt):
+        return dt.strftime("%Y-%m-%dT%H:%M")
+
+    def test_create_scheduled_post_via_form(self, auth_client, db):
+        future = utcnow() + timedelta(days=1)
+        response = auth_client.post(
+            "/admin/post/new",
+            data={
+                "title": "Zaplanowany", "excerpt": "e", "tags": "",
+                "status": "scheduled", "scheduled_for": self._datetime_local(future),
+                "body_source": "<p>x</p>",
+            },
+        )
+        assert response.status_code == 302
+        post = Post.query.filter_by(title="Zaplanowany").first()
+        assert post.status == Post.STATUS_SCHEDULED
+        assert post.scheduled_for is not None
+        assert post.published_at is None
+
+    def test_scheduled_status_with_malformed_date_is_rejected(self, auth_client, db):
+        response = auth_client.post(
+            "/admin/post/new",
+            data={
+                "title": "Zla data", "excerpt": "e", "tags": "",
+                "status": "scheduled", "scheduled_for": "nie-data",
+                "body_source": "<p>x</p>",
+            },
+        )
+        assert response.status_code == 200
+        assert Post.query.filter_by(title="Zla data").first() is None
+
+    def test_scheduled_status_without_date_is_rejected(self, auth_client, db):
+        auth_client.post(
+            "/admin/post/new",
+            data={
+                "title": "Bez daty", "excerpt": "e", "tags": "",
+                "status": "scheduled", "body_source": "<p>x</p>",
+            },
+        )
+        assert Post.query.filter_by(title="Bez daty").first() is None
+
+    def test_scheduled_date_in_the_past_is_rejected(self, auth_client, db):
+        past = utcnow() - timedelta(days=1)
+        auth_client.post(
+            "/admin/post/new",
+            data={
+                "title": "Data z przeszlosci", "excerpt": "e", "tags": "",
+                "status": "scheduled", "scheduled_for": self._datetime_local(past),
+                "body_source": "<p>x</p>",
+            },
+        )
+        assert Post.query.filter_by(title="Data z przeszlosci").first() is None
+
+    def test_due_scheduled_post_is_not_public_before_being_read(self, client, db, admin):
+        past = utcnow() - timedelta(minutes=5)
+        post = Post(
+            title="Dojrzaly", slug="dojrzaly", body_source="<p>x</p>",
+            body_html="<p>x</p>", author_id=admin.id,
+        )
+        post.schedule(past)
+        db.session.add(post)
+        db.session.commit()
+
+        # Zanim ktokolwiek odwiedzi publiczną stronę, status w bazie
+        # wciąż jest "scheduled" — promocja jest leniwa, nie ma crona.
+        assert db.session.get(Post, post.id).status == Post.STATUS_SCHEDULED
+
+    def test_due_scheduled_post_becomes_visible_after_index_visit(self, client, db, admin):
+        past = utcnow() - timedelta(minutes=5)
+        post = Post(
+            title="Dojrzewa na indeksie", slug="dojrzewa-na-indeksie",
+            body_source="<p>x</p>", body_html="<p>x</p>", author_id=admin.id,
+        )
+        post.schedule(past)
+        db.session.add(post)
+        db.session.commit()
+
+        response = client.get("/")
+        assert b"Dojrzewa na indeksie" in response.data
+
+        db.session.refresh(post)
+        assert post.status == Post.STATUS_PUBLISHED
+        assert post.scheduled_for is None
+        assert post.published_at is not None
+
+    def test_not_yet_due_scheduled_post_stays_hidden(self, client, db, admin):
+        future = utcnow() + timedelta(days=1)
+        post = Post(
+            title="Jeszcze nie", slug="jeszcze-nie",
+            body_source="<p>x</p>", body_html="<p>x</p>", author_id=admin.id,
+        )
+        post.schedule(future)
+        db.session.add(post)
+        db.session.commit()
+
+        response = client.get("/")
+        assert b"Jeszcze nie" not in response.data
+        assert client.get("/post/jeszcze-nie").status_code == 404
+
+    def test_toggle_status_on_scheduled_post_publishes_immediately(
+        self, auth_client, db, admin
+    ):
+        future = utcnow() + timedelta(days=1)
+        post = Post(
+            title="Anuluj harmonogram", slug="anuluj-harmonogram",
+            body_source="<p>x</p>", body_html="<p>x</p>", author_id=admin.id,
+        )
+        post.schedule(future)
+        db.session.add(post)
+        db.session.commit()
+
+        auth_client.post(f"/admin/post/{post.id}/toggle-status")
+        db.session.refresh(post)
+        assert post.status == Post.STATUS_PUBLISHED
+        assert post.scheduled_for is None
+
+    def test_deleting_scheduled_post_clears_schedule(self, auth_client, db, admin):
+        future = utcnow() + timedelta(days=1)
+        post = Post(
+            title="Do kosza z terminem", slug="do-kosza-z-terminem",
+            body_source="<p>x</p>", body_html="<p>x</p>", author_id=admin.id,
+        )
+        post.schedule(future)
+        db.session.add(post)
+        db.session.commit()
+
+        auth_client.post(f"/admin/post/{post.id}/delete")
+        db.session.refresh(post)
+        assert post.status == Post.STATUS_DRAFT
+        assert post.scheduled_for is None
+
+    def test_editing_scheduled_post_to_draft_clears_schedule(self, auth_client, db, admin):
+        future = utcnow() + timedelta(days=1)
+        post = Post(
+            title="Wracam do szkicu", slug="wracam-do-szkicu",
+            body_source="<p>x</p>", body_html="<p>x</p>", author_id=admin.id,
+        )
+        post.schedule(future)
+        db.session.add(post)
+        db.session.commit()
+
+        auth_client.post(
+            f"/admin/post/{post.id}/edit",
+            data={
+                "title": "Wracam do szkicu", "excerpt": "e", "tags": "",
+                "status": "draft", "body_source": "<p>x</p>",
+            },
+        )
+        db.session.refresh(post)
+        assert post.status == Post.STATUS_DRAFT
+        assert post.scheduled_for is None
+
+    def test_dashboard_shows_scheduled_count_and_filter(self, auth_client, db, admin):
+        future = utcnow() + timedelta(days=1)
+        post = Post(
+            title="Widoczny w filtrze", slug="widoczny-w-filtrze",
+            body_source="<p>x</p>", body_html="<p>x</p>", author_id=admin.id,
+        )
+        post.schedule(future)
+        db.session.add(post)
+        db.session.commit()
+
+        response = auth_client.get("/admin/")
+        assert b"1</b> zaplanowany" in response.data or b">1<" in response.data
+
+        filtered = auth_client.get("/admin/?status=scheduled")
+        assert b"Widoczny w filtrze" in filtered.data

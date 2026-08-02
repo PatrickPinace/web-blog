@@ -1,3 +1,4 @@
+from datetime import UTC
 from urllib.parse import urlparse
 
 from argon2 import PasswordHasher
@@ -15,7 +16,7 @@ from app.admin.forms import (
     PostStatusForm,
 )
 from app.extensions import db, limiter
-from app.models import Image, Label, Post, Tag, User
+from app.models import Image, Label, Post, Tag, User, utcnow
 from app.public.routes import render_post_body
 from app.utils.embeds import build_youtube_placeholder
 from app.utils.sanitize import SANITIZER_VERSION, sanitize_html
@@ -88,6 +89,7 @@ def dashboard():
         search_query=search_query,
         branches=_dashboard_branches(),
         kinds=Post.KINDS,
+        stats=_dashboard_stats(),
         delete_form=delete_form,
         status_form=status_form,
     )
@@ -126,6 +128,36 @@ def post_edit(post_id):
     return render_template("admin/post_form.html", form=form, post=post)
 
 
+@admin_bp.route("/post/<int:post_id>/duplicate", methods=["POST"])
+@login_required
+def post_duplicate(post_id):
+    form = DeletePostForm()
+    if not form.validate_on_submit():
+        abort(400)
+    original = Post.query.get_or_404(post_id)
+
+    title = f"{original.title} (kopia)"
+    copy = Post(
+        author_id=current_user.id,
+        title=title,
+        slug=unique_slug(slugify(title), lambda s: Post.query.filter_by(slug=s).first() is not None),
+        excerpt=original.excerpt,
+        kind=original.kind,
+        branch=original.branch,
+        is_concept=original.is_concept,
+        body_source=original.body_source,
+        body_html=original.body_html,
+        sanitizer_version=original.sanitizer_version,
+        status=Post.STATUS_DRAFT,
+        tags=list(original.tags),
+        labels=list(original.labels),
+    )
+    db.session.add(copy)
+    db.session.commit()
+    flash("Wpis zduplikowany jako szkic.", "success")
+    return redirect(url_for("admin.post_edit", post_id=copy.id))
+
+
 def _label_choices():
     return [(label.id, label.name) for label in Label.query.order_by(Label.name).all()]
 
@@ -141,6 +173,32 @@ def _dashboard_branches():
         .all()
     )
     return [row[0] for row in rows]
+
+
+def _dashboard_stats():
+    """Liczone od WSZYSTKICH wpisów, niezależnie od aktywnego filtra —
+    orientacja "ile mam ogółem", nie "ile w przefiltrowanym widoku"."""
+    draft_count = Post.query.filter_by(status=Post.STATUS_DRAFT).count()
+    published_count = Post.query.filter_by(status=Post.STATUS_PUBLISHED).count()
+    oldest_draft = (
+        Post.query.filter_by(status=Post.STATUS_DRAFT)
+        .order_by(Post.updated_at.asc())
+        .first()
+    )
+    oldest_draft_days = None
+    if oldest_draft is not None:
+        updated_at = oldest_draft.updated_at
+        # SQLite (testy, dev) nie zachowuje tzinfo mimo DateTime(timezone=True) —
+        # traktujemy odczytaną wartość bez strefy jako UTC, tak jak zapisana.
+        if updated_at.tzinfo is None:
+            updated_at = updated_at.replace(tzinfo=UTC)
+        oldest_draft_days = (utcnow() - updated_at).days
+    return {
+        "draft_count": draft_count,
+        "published_count": published_count,
+        "oldest_draft": oldest_draft,
+        "oldest_draft_days": oldest_draft_days,
+    }
 
 
 def _safe_admin_redirect(target):

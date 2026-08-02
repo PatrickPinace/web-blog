@@ -1,4 +1,6 @@
-from app.models import Post
+from datetime import timedelta
+
+from app.models import Post, utcnow
 
 
 class TestLogin:
@@ -119,6 +121,60 @@ class TestPostCrud:
         auth_client.post(f"/admin/post/{post.id}/delete")
         assert db.session.get(Post, post.id) is None
 
+    def test_duplicate_creates_draft_copy_with_new_slug(self, auth_client, db, admin):
+        from app.models import Label, Tag
+
+        tag = Tag(name="flask", slug="flask")
+        label = Label(name="Eksperyment", slug="eksperyment", color="purple")
+        db.session.add_all([tag, label])
+        db.session.flush()
+
+        original = Post(
+            title="Oryginal", slug="oryginal", excerpt="opis", body_source="<p>x</p>",
+            body_html="<p>x</p>", author_id=admin.id, branch="gastronomia",
+            is_concept=True, tags=[tag], labels=[label],
+        )
+        original.publish()
+        db.session.add(original)
+        db.session.commit()
+
+        response = auth_client.post(
+            f"/admin/post/{original.id}/duplicate", follow_redirects=True
+        )
+        assert response.status_code == 200
+
+        copy = Post.query.filter_by(title="Oryginal (kopia)").first()
+        assert copy is not None
+        assert copy.id != original.id
+        assert copy.slug != original.slug
+        assert copy.status == Post.STATUS_DRAFT
+        assert copy.published_at is None
+        assert copy.excerpt == "opis"
+        assert copy.branch == "gastronomia"
+        assert copy.is_concept is True
+        assert copy.body_html == "<p>x</p>"
+        assert {t.name for t in copy.tags} == {"flask"}
+        assert {label.name for label in copy.labels} == {"Eksperyment"}
+
+        # oryginał zostaje nietknięty
+        db.session.refresh(original)
+        assert original.status == Post.STATUS_PUBLISHED
+
+    def test_duplicate_twice_gets_distinct_slugs(self, auth_client, db, admin):
+        original = Post(
+            title="Powtarzalny", slug="powtarzalny", body_source="", body_html="",
+            author_id=admin.id,
+        )
+        db.session.add(original)
+        db.session.commit()
+
+        auth_client.post(f"/admin/post/{original.id}/duplicate")
+        auth_client.post(f"/admin/post/{original.id}/duplicate")
+
+        copies = Post.query.filter_by(title="Powtarzalny (kopia)").all()
+        assert len(copies) == 2
+        assert copies[0].slug != copies[1].slug
+
     def test_reusing_tag_name_does_not_duplicate_tag(self, auth_client, db):
         from app.models import Tag
 
@@ -216,6 +272,73 @@ class TestDashboardFilter:
         response = auth_client.get("/admin/?kind=../../etc")
         assert response.status_code == 200
         assert b"Normalny wpis" in response.data
+
+
+class TestDashboardDateColumn:
+    def test_shows_updated_at_date(self, auth_client, db, admin):
+        post = Post(
+            title="Z data", slug="z-data", body_source="", body_html="",
+            author_id=admin.id,
+        )
+        db.session.add(post)
+        db.session.commit()
+
+        response = auth_client.get("/admin/")
+        assert response.status_code == 200
+        expected_date = post.updated_at.strftime("%d.%m.%Y").encode()
+        assert expected_date in response.data
+
+
+class TestDashboardStats:
+    def test_counts_drafts_and_published(self, auth_client, db, admin):
+        db.session.add_all([
+            Post(title="Szkic 1", slug="szkic-1", body_source="", body_html="",
+                 author_id=admin.id, status=Post.STATUS_DRAFT),
+            Post(title="Szkic 2", slug="szkic-2", body_source="", body_html="",
+                 author_id=admin.id, status=Post.STATUS_DRAFT),
+        ])
+        published = Post(title="Publiczny", slug="publiczny", body_source="",
+                          body_html="", author_id=admin.id)
+        published.publish()
+        db.session.add(published)
+        db.session.commit()
+
+        response = auth_client.get("/admin/")
+        assert response.status_code == 200
+        assert b"<b>2</b> szkice" in response.data
+        assert b"<b>1</b> opublikowany" in response.data
+
+    def test_stats_unaffected_by_active_filter(self, auth_client, db, admin):
+        published = Post(title="Opublikowany A", slug="opub-a", body_source="",
+                          body_html="", author_id=admin.id)
+        published.publish()
+        db.session.add_all([
+            Post(title="Szkic A", slug="szkic-a", body_source="", body_html="",
+                 author_id=admin.id, status=Post.STATUS_DRAFT),
+            published,
+        ])
+        db.session.commit()
+
+        response = auth_client.get("/admin/?status=draft")
+        assert response.status_code == 200
+        # licznik opublikowanych (1) musi być widoczny mimo filtra na szkice
+        assert b"<b>1</b> opublikowany" in response.data
+
+    def test_oldest_draft_shown_with_naive_sqlite_datetime(self, auth_client, db, admin):
+        """Regresja: SQLite nie zachowuje tzinfo mimo DateTime(timezone=True),
+        więc utcnow() - updated_at rzucał TypeError zanim to obsłużono."""
+        old_draft = Post(
+            title="Stary szkic", slug="stary-szkic", body_source="", body_html="",
+            author_id=admin.id, status=Post.STATUS_DRAFT,
+        )
+        old_draft.updated_at = utcnow().replace(tzinfo=None) - timedelta(days=5)
+        db.session.add(old_draft)
+        db.session.commit()
+
+        response = auth_client.get("/admin/")
+        assert response.status_code == 200
+        assert b"Stary szkic" in response.data
+        assert b"5 dni temu" in response.data
 
 
 class TestPostStatusToggle:

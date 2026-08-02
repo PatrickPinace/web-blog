@@ -46,6 +46,7 @@ class TestAdminRequiresLogin:
         [
             "/admin/post/1/delete",
             "/admin/post/1/toggle-status",
+            "/admin/post/1/duplicate",
             "/admin/upload-image",
             "/admin/embed-youtube",
             "/admin/check-image-url",

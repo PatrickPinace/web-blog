@@ -8,6 +8,21 @@
   <div class="admin admin--wide">
     <h1>Wpisy</h1>
 
+    <div class="dashboard-stats">
+      <span><b>{{ stats.published_count }}</b> {{ pluralize_pl(stats.published_count, 'opublikowany', 'opublikowane', 'opublikowanych') }}</span>
+      <span><b>{{ stats.draft_count }}</b> {{ pluralize_pl(stats.draft_count, 'szkic', 'szkice', 'szkiców') }}</span>
+      {% if stats.oldest_draft %}
+        <span>najstarszy nieruszany:
+          <a href="{{ url_for('admin.post_edit', post_id=stats.oldest_draft.id) }}">{{ stats.oldest_draft.title }}</a>
+          {% if stats.oldest_draft_days > 0 %}
+            ({{ stats.oldest_draft_days }} {{ pluralize_pl(stats.oldest_draft_days, 'dzień', 'dni', 'dni') }} temu)
+          {% else %}
+            (dziś)
+          {% endif %}
+        </span>
+      {% endif %}
+    </div>
+
     <div class="toolbar">
       <a class="button-like" href="{{ url_for('admin.post_new') }}">+ Nowy wpis</a>
       <a class="button-like" href="{{ url_for('admin.labels') }}">Znaczki</a>
@@ -53,7 +68,7 @@
     {% if posts %}
       <table>
         <thead>
-          <tr><th>Tytuł</th><th>Typ</th><th>Status</th><th>Akcje</th></tr>
+          <tr><th>Tytuł</th><th>Typ</th><th>Aktualizacja</th><th>Status</th><th>Akcje</th></tr>
         </thead>
         <tbody>
           {% for post in posts %}
@@ -66,6 +81,9 @@
                 {% endfor %}
               </td>
               <td>{{ post.kind }}{% if post.branch %} · {{ post.branch }}{% endif %}</td>
+              <td class="admin-date" title="utworzono {{ post.created_at.strftime('%d.%m.%Y %H:%M') }}">
+                {{ post.updated_at.strftime('%d.%m.%Y') }}
+              </td>
               <td>
                 <form action="{{ url_for('admin.post_toggle_status', post_id=post.id) }}" method="post"
                       class="status-toggle">
@@ -80,10 +98,15 @@
               <td>
                 <a href="{{ url_for('admin.post_edit', post_id=post.id) }}">Edytuj</a> ·
                 <a href="{{ url_for('admin.post_preview', post_id=post.id) }}">Podgląd</a> ·
+                <form action="{{ url_for('admin.post_duplicate', post_id=post.id) }}" method="post"
+                      class="inline-action">
+                  {{ delete_form.hidden_tag() }}
+                  <button type="submit" class="action-neutral">Duplikuj</button>
+                </form> ·
                 {# Potwierdzenie wpina admin-confirm.js — inline `onsubmit`
                    nie zadziała, bo CSP nie dopuszcza skryptów w atrybutach. #}
                 <form action="{{ url_for('admin.post_delete', post_id=post.id) }}" method="post"
-                      style="display:inline" data-confirm="Usunąć wpis „{{ post.title }}”?">
+                      class="inline-action" data-confirm="Usunąć wpis „{{ post.title }}”?">
                   {{ delete_form.hidden_tag() }}
                   <button type="submit">Usuń</button>
                 </form>

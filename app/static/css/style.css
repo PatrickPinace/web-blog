@@ -538,6 +538,13 @@ html[data-theme="dark"] .admin td button.admin-status-toggle:hover{filter:bright
 .admin .filters a:hover{color:var(--text)}
 .admin .filters a.is-active{color:var(--accent)}
 
+/* Pasek statystyk nad tabelą — liczone od wszystkich wpisów, nie od
+   aktywnie przefiltrowanej listy (patrz _dashboard_stats w routes.py). */
+.dashboard-stats{display:flex;flex-wrap:wrap;gap:20px;margin:0 0 22px;
+  font-family:var(--mono);font-size:.76rem;color:var(--muted)}
+.dashboard-stats b{color:var(--text);font-weight:600}
+.dashboard-stats a{color:var(--accent)}
+
 /* Szukaj + filtr typu/branży na pulpicie — osobna klasa (nie input[type=text])
    bo pole jest type=search, i żeby nie mieszać z resztą .admin input. */
 .dashboard-search{display:flex;flex-wrap:wrap;gap:10px;align-items:center;margin:0 0 26px}
@@ -548,13 +555,18 @@ html[data-theme="dark"] .admin td button.admin-status-toggle:hover{filter:bright
 .dashboard-search input[type=search]:focus,.dashboard-search select:focus{
   outline:none;border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-soft)}
 
-/* Akcje w tabeli: „Edytuj · Podgląd · Usuń”. Usuń jest <button>, więc bez
-   tego dostaje domyślny szary przycisk systemowy obok dwóch linków. */
+.admin td.admin-date{font-family:var(--mono);font-size:.76rem;color:var(--faint);cursor:help}
+
+/* Akcje w tabeli: „Edytuj · Podgląd · Duplikuj · Usuń”. Duplikuj/Usuń są
+   <form><button>, więc bez .inline-action byłyby blokowe i łamałyby wiersz. */
 .admin td a{color:var(--muted);transition:color .15s ease}
 .admin td a:hover{color:var(--accent)}
+.admin td .inline-action{display:inline}
 .admin td button{font-family:var(--sans);font-size:inherit;color:var(--muted);
   background:none;border:none;padding:0;cursor:pointer;transition:color .15s ease}
 .admin td button:hover{color:#e5484d}
+/* Duplikuj nie jest destrukcyjne — bez czerwieni zarezerwowanej dla Usuń. */
+.admin td button.action-neutral:hover{color:var(--accent)}
 /* Ostatnia kolumna (akcje) w jednej linii — inaczej „Usuń” zawija się pod
    spód i wiersz robi się dwa razy wyższy. */
 .admin th:last-child,.admin td:last-child{white-space:nowrap;width:1%;padding-right:0}

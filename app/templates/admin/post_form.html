@@ -7,11 +7,13 @@
 {% endblock %}
 
 {% macro field(f, placeholder="") %}
-  {{ f.label }}
-  {{ f(placeholder=placeholder) if placeholder else f() }}
-  {% if f.errors %}
-    <ul class="errors">{% for error in f.errors %}<li>{{ error }}</li>{% endfor %}</ul>
-  {% endif %}
+  <div class="field">
+    {{ f.label }}
+    {{ f(placeholder=placeholder) if placeholder else f() }}
+    {% if f.errors %}
+      <ul class="errors">{% for error in f.errors %}<li>{{ error }}</li>{% endfor %}</ul>
+    {% endif %}
+  </div>
 {% endmacro %}
 
 {% block content %}
@@ -25,6 +27,13 @@
     </div>
 
     <h1>{{ 'Edytuj wpis' if post else 'Nowy wpis' }}</h1>
+    <p class="subtitle">
+      {%- if post -%}
+        Zmiany są widoczne publicznie dopiero po zapisaniu ze statusem „Opublikowany”.
+      {%- else -%}
+        Szkic możesz zapisać w każdej chwili i wrócić do niego później.
+      {%- endif -%}
+    </p>
 
     <form method="post" novalidate>
       {{ form.hidden_tag() }}
@@ -34,35 +43,44 @@
       {{ field(form.kind) }}
       {{ field(form.branch, placeholder="np. gastronomia") }}
 
-      <div class="checkbox">
-        {{ form.is_concept() }}
-        {{ form.is_concept.label }}
+      <div class="field">
+        <div class="checkbox">
+          {{ form.is_concept() }}
+          {{ form.is_concept.label }}
+        </div>
+        <p class="hint">Zaznacz, jeśli klient jest przykładem, a nie prawdziwym
+          zleceniem — wpis dostanie widoczną etykietę „Projekt koncepcyjny”.</p>
       </div>
-      <p class="hint">Zaznacz, jeśli klient jest przykładem, a nie prawdziwym
-        zleceniem — wpis dostanie widoczną etykietę „Projekt koncepcyjny”.</p>
 
       {{ field(form.tags, placeholder="np. flask, case-study") }}
       {{ field(form.status) }}
 
-      <label>Treść</label>
-      <span class="editor-actions">
-        <label class="button-like" for="image-upload">Wstaw obrazek (plik)</label>
-        <input type="file" id="image-upload" accept="image/*" hidden
-               data-endpoint="{{ url_for('admin.upload_image_endpoint') }}">
-        <button type="button" class="button-like" id="image-by-url"
-                data-endpoint="{{ url_for('admin.check_image_url_endpoint') }}">Obrazek z URL</button>
-        <button type="button" class="button-like" id="embed-youtube"
-                data-endpoint="{{ url_for('admin.embed_youtube_endpoint') }}">Wstaw film YouTube</button>
-      </span>
+      {# Quill wstawia swój toolbar jako rodzeństwo TUŻ PRZED #editor-root,
+         wewnątrz rodzica — dlatego .editor-shell obejmuje oba, a przyciski
+         akcji siedzą w tym samym pudełku, nad paskiem narzędzi. #}
+      <div class="field">
+        <label>Treść</label>
+        <div class="editor-shell">
+          <div class="editor-actions">
+            <label class="button-like" for="image-upload">Wstaw obrazek (plik)</label>
+            <input type="file" id="image-upload" accept="image/*" hidden
+                   data-endpoint="{{ url_for('admin.upload_image_endpoint') }}">
+            <button type="button" class="button-like" id="image-by-url"
+                    data-endpoint="{{ url_for('admin.check_image_url_endpoint') }}">Obrazek z URL</button>
+            <button type="button" class="button-like" id="embed-youtube"
+                    data-endpoint="{{ url_for('admin.embed_youtube_endpoint') }}">Wstaw film YouTube</button>
+          </div>
 
-      {# Treść startowa przekazywana przez wartość pola, nie przez wstrzyknięcie
-         do HTML — dzięki temu autoescaping Jinja2 zostaje aktywny. #}
-      <input type="hidden" id="initial-content" value="{{ post.body_source if post else '' }}">
+          {# Treść startowa przekazywana przez wartość pola, nie przez wstrzyknięcie
+             do HTML — dzięki temu autoescaping Jinja2 zostaje aktywny. #}
+          <input type="hidden" id="initial-content" value="{{ post.body_source if post else '' }}">
 
-      <div id="editor-root"
-           data-target-field="{{ form.body_source.id }}"
-           data-csrf-token="{{ csrf_token() }}"></div>
-      {{ form.body_source() }}
+          <div id="editor-root"
+               data-target-field="{{ form.body_source.id }}"
+               data-csrf-token="{{ csrf_token() }}"></div>
+        </div>
+        {{ form.body_source() }}
+      </div>
 
       <div class="actions">
         <button class="btn btn-primary" type="submit">Zapisz</button>

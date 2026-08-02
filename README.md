@@ -9,9 +9,9 @@ Projekt jest jednocześnie **działającym blogiem** i **template'em do reużyci
 konfiguracja przez zmienne środowiskowe, branding w jednym miejscu, instrukcja
 forka poniżej.
 
-> 🚧 **Status: w budowie.** Konfiguracja deployu (etap 6) gotowa —
-> Dockerfile i instrukcja poniżej. Faktyczne wdrożenie wymaga kont na
-> Neon/Cloudinary/Koyeb. Live URL pojawi się tutaj po pierwszym deployu.
+> 🚧 **Status: w budowie.** Backend, panel i warstwa wizualna gotowe.
+> Konfiguracja deployu (etap 6) opisana poniżej — pozostaje samo wdrożenie.
+> Live URL pojawi się tutaj po pierwszym deployu.
 
 ---
 
@@ -97,8 +97,8 @@ zmianie whitelisty sanitizera**, niezależnie od reszty prac.
 1. Zrób fork i sklonuj repozytorium.
 2. Ustaw w `.env`: `BLOG_TITLE`, `BLOG_DESCRIPTION`, `BLOG_AUTHOR`,
    `BLOG_BASE_URL`.
-3. Podmień kolory i typografię w `app/static/css/style.css` (zmienne CSS
-   na górze pliku).
+3. Podmień kolory w `app/static/css/style.css` — akcent i cała paleta siedzą
+   w zmiennych `:root` (oraz `html[data-theme="dark"]`) na górze pliku.
 4. Załóż darmowe konta: [Neon](https://neon.tech) (baza),
    [Cloudinary](https://cloudinary.com) (obrazki),
    [Koyeb](https://koyeb.com) (hosting).
@@ -195,6 +195,28 @@ Limity darmowych planów warto sprawdzać raz na jakiś czas:
 
 Obrazki serwujemy z transformacjami `f_auto,q_auto` (automatyczny WebP
 i kompresja), co znacząco ogranicza zużycie kredytów Cloudinary.
+
+---
+
+## Front
+
+Bez frameworka i bez kroku budowania — jeden arkusz `style.css` i dwa małe
+pliki JS. Kilka rzeczy wynika wprost z polityki bezpieczeństwa:
+
+- **Fonty hostowane lokalnie** (`app/static/fonts/`, IBM Plex, 12 plików
+  woff2). CSP ma `default-src 'self'`, więc Google Fonts wymagałoby
+  rozluźnienia polityki — a przy okazji nie wysyłamy IP czytelników na
+  zewnątrz. Uwaga przy podmianie fontu: polskie znaki są rozbite między
+  podzbiory `latin` i `latin-ext` (`ó` jest w tym pierwszym), potrzebne są
+  oba.
+- **Zero skryptów inline i atrybutów `on*`** — `script-src 'self'` bez
+  `unsafe-inline` oznacza, że taki kod po prostu się nie wykona. Stąd np.
+  potwierdzenie usuwania wpisu siedzi w `admin-confirm.js`, a nie
+  w `onsubmit`.
+- **JS jest opcjonalny.** Motyw, spis treści i animacje wejścia to dodatki;
+  treść, nawigacja i formularze działają bez nich.
+- Motyw jasny/ciemny idzie za ustawieniem systemu, z ręcznym przełącznikiem
+  zapamiętywanym w `localStorage`.
 
 ---
 

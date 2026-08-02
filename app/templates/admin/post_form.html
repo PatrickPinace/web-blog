@@ -6,46 +6,52 @@
   <link rel="stylesheet" href="{{ url_for('static', filename='vendor/quill/quill.snow.css') }}">
 {% endblock %}
 
-{% block content %}
-  <h1>{{ 'Edytuj wpis' if post else 'Nowy wpis' }}</h1>
-
-  {% if post %}
-    <p><a href="{{ url_for('admin.post_preview', post_id=post.id) }}">Podgląd</a></p>
+{% macro field(f, placeholder="") %}
+  {{ f.label }}
+  {{ f(placeholder=placeholder) if placeholder else f() }}
+  {% if f.errors %}
+    <ul class="errors">{% for error in f.errors %}<li>{{ error }}</li>{% endfor %}</ul>
   {% endif %}
+{% endmacro %}
 
-  <form method="post" novalidate>
-    {{ form.hidden_tag() }}
+{% block content %}
+<main class="wrap">
+  <div class="admin admin--wide">
+    <div class="toolbar">
+      <a href="{{ url_for('admin.dashboard') }}">&larr; Panel</a>
+      {% if post %}
+        <a href="{{ url_for('admin.post_preview', post_id=post.id) }}">Podgląd</a>
+      {% endif %}
+    </div>
 
-    <p>
-      {{ form.title.label }}<br>
-      {{ form.title(size=60) }}
-      {% for error in form.title.errors %}<br><span class="flash flash--error">{{ error }}</span>{% endfor %}
-    </p>
+    <h1>{{ 'Edytuj wpis' if post else 'Nowy wpis' }}</h1>
 
-    <p>
-      {{ form.excerpt.label }}<br>
-      {{ form.excerpt(size=60) }}
-    </p>
+    <form method="post" novalidate>
+      {{ form.hidden_tag() }}
 
-    <p>
-      {{ form.tags.label }}<br>
-      {{ form.tags(size=60, placeholder="np. flask, case-study") }}
-    </p>
+      {{ field(form.title) }}
+      {{ field(form.excerpt) }}
+      {{ field(form.kind) }}
+      {{ field(form.branch, placeholder="np. gastronomia") }}
 
-    <p>
-      {{ form.status.label }}<br>
-      {{ form.status() }}
-    </p>
+      <div class="checkbox">
+        {{ form.is_concept() }}
+        {{ form.is_concept.label }}
+      </div>
+      <p class="hint">Zaznacz, jeśli klient jest przykładem, a nie prawdziwym
+        zleceniem — wpis dostanie widoczną etykietę „Projekt koncepcyjny”.</p>
 
-    <p>
-      <label>Treść</label><br>
+      {{ field(form.tags, placeholder="np. flask, case-study") }}
+      {{ field(form.status) }}
+
+      <label>Treść</label>
       <span class="editor-actions">
         <label class="button-like" for="image-upload">Wstaw obrazek (plik)</label>
         <input type="file" id="image-upload" accept="image/*" hidden
                data-endpoint="{{ url_for('admin.upload_image_endpoint') }}">
-        <button type="button" id="image-by-url"
+        <button type="button" class="button-like" id="image-by-url"
                 data-endpoint="{{ url_for('admin.check_image_url_endpoint') }}">Obrazek z URL</button>
-        <button type="button" id="embed-youtube"
+        <button type="button" class="button-like" id="embed-youtube"
                 data-endpoint="{{ url_for('admin.embed_youtube_endpoint') }}">Wstaw film YouTube</button>
       </span>
 
@@ -57,10 +63,13 @@
            data-target-field="{{ form.body_source.id }}"
            data-csrf-token="{{ csrf_token() }}"></div>
       {{ form.body_source() }}
-    </p>
 
-    <button type="submit">Zapisz</button>
-  </form>
+      <div class="actions">
+        <button class="btn btn-primary" type="submit">Zapisz</button>
+      </div>
+    </form>
+  </div>
+</main>
 {% endblock %}
 
 {% block scripts %}

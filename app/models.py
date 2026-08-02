@@ -32,9 +32,28 @@ class Post(db.Model):
     STATUS_DRAFT = "draft"
     STATUS_PUBLISHED = "published"
 
+    KIND_CASE_STUDY = "realizacja"
+    KIND_NOTE = "notatka"
+    KINDS = (KIND_CASE_STUDY, KIND_NOTE)
+
     id = db.Column(db.Integer, primary_key=True)
     title = db.Column(db.String(200), nullable=False)
     slug = db.Column(db.String(220), unique=True, nullable=False, index=True)
+
+    # Typ wpisu — rozdziela opisy realizacji od notatek technicznych.
+    # Widoczny na liście jako etykieta, filtruje charakter treści.
+    kind = db.Column(
+        db.String(20), nullable=False, default=KIND_CASE_STUDY, index=True
+    )
+
+    # Branża klienta ("gastronomia", "usługi lokalne"). Tylko dla realizacji,
+    # przy notatkach zwykle puste.
+    branch = db.Column(db.String(80), nullable=True)
+
+    # Czy to projekt koncepcyjny (fikcyjny klient), a nie prawdziwe wdrożenie.
+    # Wymóg uczciwości wobec czytelnika: takie wpisy są jawnie oznaczone
+    # w interfejsie — patrz workdir/brief-design.md.
+    is_concept = db.Column(db.Boolean, nullable=False, default=False)
 
     # body_source: surowe wyjście edytora Quill, do ponownej edycji.
     # body_html: HTML po sanityzacji bleach — TO renderujemy publicznie.

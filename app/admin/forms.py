@@ -1,6 +1,12 @@
 from flask_wtf import FlaskForm
-from wtforms import HiddenField, PasswordField, SelectField, StringField
-from wtforms.validators import DataRequired, Length
+from wtforms import (
+    BooleanField,
+    HiddenField,
+    PasswordField,
+    SelectField,
+    StringField,
+)
+from wtforms.validators import DataRequired, Length, Optional
 
 from app.models import Post
 
@@ -15,6 +21,20 @@ class PostForm(FlaskForm):
         "Tytuł", validators=[DataRequired(), Length(max=200)]
     )
     excerpt = StringField("Krótki opis (excerpt)", validators=[Length(max=500)])
+    # Bez DataRequired: pole ma wartość domyślną, a SelectField i tak
+    # odrzuci wartość spoza `choices` (walidacja "pre-validate").
+    kind = SelectField(
+        "Typ wpisu",
+        choices=[
+            (Post.KIND_CASE_STUDY, "Realizacja"),
+            (Post.KIND_NOTE, "Notatka techniczna"),
+        ],
+        default=Post.KIND_CASE_STUDY,
+    )
+    branch = StringField(
+        "Branża", validators=[Optional(), Length(max=80)]
+    )
+    is_concept = BooleanField("Projekt koncepcyjny (fikcyjny klient)")
     status = SelectField(
         "Status",
         choices=[

@@ -1,34 +1,55 @@
+{# Lista wpisów współdzielona przez stronę główną i widok tagu.
+   Jedno miejsce na markup wiersza — inaczej oba widoki rozjeżdżają się
+   przy pierwszej zmianie designu. #}
+
 {% macro post_list(pagination, endpoint, endpoint_kwargs={}) %}
   {% if pagination.items %}
-    <ul class="post-list">
+    <ol class="post-index">
       {% for post in pagination.items %}
-        <li class="post-list__item">
-          <h2><a href="{{ url_for('public.post_detail', slug=post.slug) }}">{{ post.title }}</a></h2>
-          <p class="post-list__meta">
-            <time datetime="{{ post.published_at.isoformat() }}">
-              {{ post.published_at.strftime('%d.%m.%Y') }}
-            </time>
-            {% if post.tags %}
-              · {% for tag in post.tags %}<a href="{{ url_for('public.tag_detail', slug=tag.slug) }}">{{ tag.name }}</a>{% if not loop.last %}, {% endif %}{% endfor %}
-            {% endif %}
-          </p>
-          {% if post.excerpt %}<p>{{ post.excerpt }}</p>{% endif %}
+        <li class="reveal">
+          <a class="row" href="{{ url_for('public.post_detail', slug=post.slug) }}"
+             data-kind="{{ post.kind }}"
+             data-title="{{ post.title }}"
+             data-branch="{{ post.branch or '—' }}"
+             data-read="{{ post.body_html | read_time }} min"
+             data-status="{{ 'koncepcyjny' if post.is_concept else 'wdrożone' }}">
+            <span class="wipe"></span>
+            <span class="num">{{ '%02d' % (loop.index + (pagination.page - 1) * pagination.per_page) }}</span>
+            <span class="body">
+              <span class="meta">
+                <span class="kind">{{ post.kind }}</span>
+                {% if post.branch %}<span class="branch">{{ post.branch }}</span>{% endif %}
+              </span>
+              <span class="title">{{ post.title }}</span>
+              {% if post.excerpt %}<span class="lead">{{ post.excerpt }}</span>{% endif %}
+            </span>
+            <span class="side">
+              <time datetime="{{ post.published_at.isoformat() }}">{{ post.published_at.strftime('%d.%m.%Y') }}</time>
+              <span class="arrow">&rarr;</span>
+            </span>
+          </a>
         </li>
       {% endfor %}
-    </ul>
+    </ol>
 
     {% if pagination.pages > 1 %}
       <nav class="pagination" aria-label="Stronicowanie">
-        {% if pagination.has_prev %}
-          <a href="{{ url_for(endpoint, page=pagination.prev_num, **endpoint_kwargs) }}">&larr; Nowsze</a>
-        {% endif %}
-        <span>{{ pagination.page }} / {{ pagination.pages }}</span>
-        {% if pagination.has_next %}
-          <a href="{{ url_for(endpoint, page=pagination.next_num, **endpoint_kwargs) }}">Starsze &rarr;</a>
-        {% endif %}
+        <span class="count">Strona {{ pagination.page }} / {{ pagination.pages }}</span>
+        <span class="links">
+          {% if pagination.has_prev %}
+            <a href="{{ url_for(endpoint, page=pagination.prev_num, **endpoint_kwargs) }}">&larr; Nowsze</a>
+          {% else %}
+            <span class="disabled">&larr; Nowsze</span>
+          {% endif %}
+          {% if pagination.has_next %}
+            <a href="{{ url_for(endpoint, page=pagination.next_num, **endpoint_kwargs) }}">Starsze &rarr;</a>
+          {% else %}
+            <span class="disabled">Starsze &rarr;</span>
+          {% endif %}
+        </span>
       </nav>
     {% endif %}
   {% else %}
-    <p><em>Brak wpisów.</em></p>
+    <p class="empty"><em>Brak wpisów.</em></p>
   {% endif %}
 {% endmacro %}

@@ -2,7 +2,54 @@
 {% from "public/_post_list.html" import post_list %}
 
 {% block content %}
-  <h1>{{ config.BLOG_TITLE }}</h1>
-  <p>{{ config.BLOG_DESCRIPTION }}</p>
-  {{ post_list(pagination, "public.index") }}
+<main class="wrap" style="padding-bottom:140px">
+
+  <section class="hero">
+    <div>
+      <span class="hero-kicker reveal">{{ config.BLOG_DESCRIPTION }}</span>
+      <h1 class="reveal">Prosta strona, którą klient rozumie w trzydzieści sekund.</h1>
+      <p class="reveal">Opisy realizacji: co było do zrobienia, jak to rozwiązałem,
+        czego świadomie nie zrobiłem. Plus notatki techniczne o tym, jak zbudowany
+        jest ten blog.</p>
+    </div>
+    <div class="hero-stats reveal hide-md">
+      <span><b>{{ stats.posts }}</b> wpisów</span>
+      <span><b>{{ stats.branches }}</b> branż</span>
+    </div>
+  </section>
+
+  <div class="index-layout">
+    <div>
+      <div class="index-head">
+        <span class="label">Indeks realizacji</span>
+        <nav class="filters">
+          <a class="is-active" href="{{ url_for('public.index') }}">wszystkie</a>
+          {% for tag in tags %}
+            <a href="{{ url_for('public.tag_detail', slug=tag.slug) }}">{{ tag.name }}</a>
+          {% endfor %}
+        </nav>
+      </div>
+
+      {{ post_list(pagination, "public.index") }}
+    </div>
+
+    {# Podgląd wypełniany po najechaniu na wiersz (main.js). Bez JS zostaje
+       pierwszy wpis — sama lista działa niezależnie od tego panelu. #}
+    {% if pagination.items %}
+      {% set first = pagination.items[0] %}
+      <aside class="preview hide-md" data-preview>
+        <div class="box">
+          <span class="kind" data-preview-kind>{{ first.kind }}</span>
+          <p class="title" data-preview-title>{{ first.title }}</p>
+          <dl>
+            <div><dt>branża</dt><dd data-preview-branch>{{ first.branch or '—' }}</dd></div>
+            <div><dt>czytanie</dt><dd data-preview-read>{{ first.body_html | read_time }} min</dd></div>
+            <div><dt>status</dt><dd data-preview-status>{{ 'koncepcyjny' if first.is_concept else 'wdrożone' }}</dd></div>
+          </dl>
+        </div>
+        <p class="hint">Najedź na wpis, żeby zobaczyć podgląd.</p>
+      </aside>
+    {% endif %}
+  </div>
+</main>
 {% endblock %}

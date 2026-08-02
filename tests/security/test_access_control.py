@@ -89,6 +89,20 @@ class TestDraftVisibility:
         _make_post(db, admin, title="Jawny", slug="jawny", status=Post.STATUS_PUBLISHED)
         assert client.get("/post/jawny").status_code == 200
 
+    def test_draft_absent_from_prev_next_navigation(self, client, db, admin):
+        """Nawigacja między wpisami nie może zdradzić tytułu szkicu.
+
+        Sam tytuł w linku "następny wpis" byłby wyciekiem — czytelnik
+        dowiedziałby się o treści, której nie opublikowano.
+        """
+        _make_post(db, admin, title="Starszy", slug="starszy", status=Post.STATUS_PUBLISHED)
+        _make_post(db, admin, title="Tajny szkic", slug="tajny", status=Post.STATUS_DRAFT)
+        _make_post(db, admin, title="Nowszy", slug="nowszy", status=Post.STATUS_PUBLISHED)
+
+        response = client.get("/post/starszy")
+        assert response.status_code == 200
+        assert b"Tajny szkic" not in response.data
+
 
 class TestCsrf:
     def test_delete_rejected_without_csrf_token(self, app, admin):

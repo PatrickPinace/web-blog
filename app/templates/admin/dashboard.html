@@ -3,50 +3,66 @@
 {% block title %}Panel — {{ config.BLOG_TITLE }}{% endblock %}
 
 {% block content %}
-  <h1>Wpisy</h1>
+<main class="wrap">
+  <div class="admin admin--wide">
+    <h1>Wpisy</h1>
 
-  <p>
-    <a href="{{ url_for('admin.post_new') }}">+ Nowy wpis</a>
-    ·
-    <form action="{{ url_for('admin.logout') }}" method="post" style="display:inline">
-      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-      <button type="submit">Wyloguj</button>
-    </form>
-  </p>
+    <div class="toolbar">
+      <a class="button-like" href="{{ url_for('admin.post_new') }}">+ Nowy wpis</a>
+      <span class="filters">
+        <a class="{{ 'is-active' if not status_filter }}"
+           href="{{ url_for('admin.dashboard') }}">wszystkie</a>
+        <a class="{{ 'is-active' if status_filter == 'draft' }}"
+           href="{{ url_for('admin.dashboard', status='draft') }}">szkice</a>
+        <a class="{{ 'is-active' if status_filter == 'published' }}"
+           href="{{ url_for('admin.dashboard', status='published') }}">opublikowane</a>
+      </span>
+      <form action="{{ url_for('admin.logout') }}" method="post" style="margin-left:auto">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <button class="button-like" type="submit">Wyloguj</button>
+      </form>
+    </div>
 
-  <p>
-    Filtr:
-    <a href="{{ url_for('admin.dashboard') }}">wszystkie</a> ·
-    <a href="{{ url_for('admin.dashboard', status='draft') }}">szkice</a> ·
-    <a href="{{ url_for('admin.dashboard', status='published') }}">opublikowane</a>
-  </p>
+    {% if posts %}
+      <table>
+        <thead>
+          <tr><th>Tytuł</th><th>Typ</th><th>Status</th><th>Akcje</th></tr>
+        </thead>
+        <tbody>
+          {% for post in posts %}
+            <tr>
+              <td>
+                {{ post.title }}
+                {% if post.is_concept %}<span class="flag"><span class="dot"></span>koncepcyjny</span>{% endif %}
+              </td>
+              <td>{{ post.kind }}{% if post.branch %} · {{ post.branch }}{% endif %}</td>
+              <td>
+                <span class="status status--{{ 'published' if post.is_published else 'draft' }}">
+                  {{ 'Opublikowany' if post.is_published else 'Szkic' }}
+                </span>
+              </td>
+              <td>
+                <a href="{{ url_for('admin.post_edit', post_id=post.id) }}">Edytuj</a> ·
+                <a href="{{ url_for('admin.post_preview', post_id=post.id) }}">Podgląd</a> ·
+                {# Potwierdzenie wpina admin-confirm.js — inline `onsubmit`
+                   nie zadziała, bo CSP nie dopuszcza skryptów w atrybutach. #}
+                <form action="{{ url_for('admin.post_delete', post_id=post.id) }}" method="post"
+                      style="display:inline" data-confirm="Usunąć wpis „{{ post.title }}”?">
+                  {{ delete_form.hidden_tag() }}
+                  <button type="submit">Usuń</button>
+                </form>
+              </td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    {% else %}
+      <p><em>Brak wpisów{% if status_filter %} o statusie „{{ status_filter }}”{% endif %}.</em></p>
+    {% endif %}
+  </div>
+</main>
+{% endblock %}
 
-  {% if posts %}
-    <table>
-      <thead>
-        <tr><th>Tytuł</th><th>Status</th><th>Akcje</th></tr>
-      </thead>
-      <tbody>
-        {% for post in posts %}
-          <tr>
-            <td>{{ post.title }}</td>
-            <td>{{ 'Opublikowany' if post.is_published else 'Szkic' }}</td>
-            <td>
-              <a href="{{ url_for('admin.post_edit', post_id=post.id) }}">Edytuj</a>
-              ·
-              <a href="{{ url_for('admin.post_preview', post_id=post.id) }}">Podgląd</a>
-              ·
-              <form action="{{ url_for('admin.post_delete', post_id=post.id) }}" method="post" style="display:inline"
-                    onsubmit="return confirm('Usunąć wpis {{ post.title|e }}?');">
-                {{ delete_form.hidden_tag() }}
-                <button type="submit">Usuń</button>
-              </form>
-            </td>
-          </tr>
-        {% endfor %}
-      </tbody>
-    </table>
-  {% else %}
-    <p><em>Brak wpisów{% if status_filter %} o statusie "{{ status_filter }}"{% endif %}.</em></p>
-  {% endif %}
+{% block scripts %}
+  <script src="{{ url_for('static', filename='js/admin-confirm.js') }}"></script>
 {% endblock %}

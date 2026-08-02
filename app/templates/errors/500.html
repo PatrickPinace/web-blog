@@ -3,7 +3,15 @@
 {% block title %}Błąd serwera — {{ config.BLOG_TITLE }}{% endblock %}
 
 {% block content %}
-  <h1>500 — coś poszło nie tak</h1>
-  <p>Wystąpił błąd po stronie serwera. Spróbuj ponownie za chwilę.</p>
-  <p><a href="{{ url_for('public.index') }}">&larr; Wróć na stronę główną</a></p>
+<main class="wrap" style="padding-bottom:140px">
+  <div class="error is-500">
+    <span class="code">500</span>
+    <h1>Coś się zepsuło po naszej stronie</h1>
+    <p>Błąd trafił do logów. Spróbuj odświeżyć za chwilę — jeśli to się
+      powtarza, daj znać mailem.</p>
+    <div class="actions">
+      <a class="btn btn-primary" href="{{ url_for('public.index') }}">Strona główna</a>
+    </div>
+  </div>
+</main>
 {% endblock %}

@@ -7,6 +7,7 @@ from app.admin import admin_bp
 from app.admin.forms import DeletePostForm, LoginForm, PostForm
 from app.extensions import db, limiter
 from app.models import Image, Post, Tag, User
+from app.public.routes import render_post_body
 from app.utils.embeds import build_youtube_placeholder
 from app.utils.sanitize import SANITIZER_VERSION, sanitize_html
 from app.utils.slugify import slugify, unique_slug
@@ -97,7 +98,18 @@ def post_edit(post_id):
 @login_required
 def post_preview(post_id):
     post = Post.query.get_or_404(post_id)
-    return render_template("public/post_detail.html", post=post, is_preview=True)
+    # Ten sam szablon co publicznie, więc musi dostać komplet danych.
+    # Sąsiadów nie pokazujemy — szkic nie ma miejsca w osi publikacji.
+    body_html, headings = render_post_body(post)
+    return render_template(
+        "public/post_detail.html",
+        post=post,
+        body_html=body_html,
+        headings=headings,
+        prev_post=None,
+        next_post=None,
+        is_preview=True,
+    )
 
 
 @admin_bp.route("/post/<int:post_id>/delete", methods=["POST"])
@@ -156,6 +168,9 @@ def _apply_form_to_post(form, post, is_new):
 
     post.title = form.title.data
     post.excerpt = form.excerpt.data
+    post.kind = form.kind.data
+    post.branch = (form.branch.data or "").strip() or None
+    post.is_concept = bool(form.is_concept.data)
 
     # Kolejność zapisu jest obowiązkowa (plan, sekcja 5): body_source
     # najpierw bez zmian, potem body_html = sanitize(body_source).

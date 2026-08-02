@@ -3,7 +3,16 @@
 {% block title %}Nie znaleziono — {{ config.BLOG_TITLE }}{% endblock %}
 
 {% block content %}
-  <h1>404 — nie znaleziono</h1>
-  <p>Strona, której szukasz, nie istnieje albo została usunięta.</p>
-  <p><a href="{{ url_for('public.index') }}">&larr; Wróć na stronę główną</a></p>
+<main class="wrap" style="padding-bottom:140px">
+  <div class="error">
+    <span class="code">404</span>
+    <h1>Tej strony tu nie ma</h1>
+    <p>Adres jest błędny albo wpis został usunięty. Lista wszystkich wpisów
+      jest na stronie głównej.</p>
+    <div class="actions">
+      <a class="btn btn-primary" href="{{ url_for('public.index') }}">Wróć do wpisów</a>
+      <a class="btn btn-ghost" href="{{ url_for('public.about') }}">O blogu</a>
+    </div>
+  </div>
+</main>
 {% endblock %}

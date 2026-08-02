@@ -3,17 +3,19 @@
 {% block title %}Logowanie — {{ config.BLOG_TITLE }}{% endblock %}
 
 {% block content %}
-  <h1>Panel administracyjny</h1>
-  <form method="post" novalidate>
-    {{ form.hidden_tag() }}
-    <p>
-      {{ form.username.label }}<br>
-      {{ form.username(size=32, autofocus=true) }}
-    </p>
-    <p>
-      {{ form.password.label }}<br>
-      {{ form.password(size=32) }}
-    </p>
-    <button type="submit">Zaloguj</button>
-  </form>
+<main class="wrap">
+  <div class="admin">
+    <h1>Panel administracyjny</h1>
+    <form method="post" novalidate>
+      {{ form.hidden_tag() }}
+      {{ form.username.label }}
+      {{ form.username(autofocus=true, autocomplete="username") }}
+      {{ form.password.label }}
+      {{ form.password(autocomplete="current-password") }}
+      <div class="actions">
+        <button class="btn btn-primary" type="submit">Zaloguj</button>
+      </div>
+    </form>
+  </div>
+</main>
 {% endblock %}

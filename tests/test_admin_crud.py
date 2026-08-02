@@ -156,3 +156,66 @@ class TestDashboardFilter:
         response = auth_client.get("/admin/?status=draft")
         assert b"Szkic" in response.data
         assert b"Publiczny" not in response.data
+
+
+class TestPostMetadataFields:
+    """kind / branch / is_concept — pola dodane razem z designem (etap 6a)."""
+
+    def test_kind_defaults_when_absent_from_form(self, auth_client, db):
+        auth_client.post(
+            "/admin/post/new",
+            data={
+                "title": "Bez kind", "excerpt": "e", "tags": "",
+                "status": "draft", "body_source": "<p>x</p>",
+            },
+        )
+        post = Post.query.filter_by(title="Bez kind").first()
+        assert post.kind == Post.KIND_CASE_STUDY
+        assert post.is_concept is False
+        assert post.branch is None
+
+    def test_kind_rejects_value_outside_choices(self, auth_client, db):
+        auth_client.post(
+            "/admin/post/new",
+            data={
+                "title": "Zly kind", "excerpt": "e", "tags": "",
+                "kind": "../../etc", "status": "draft",
+                "body_source": "<p>x</p>",
+            },
+        )
+        assert Post.query.filter_by(title="Zly kind").first() is None
+
+    def test_blank_branch_is_stored_as_null(self, auth_client, db):
+        auth_client.post(
+            "/admin/post/new",
+            data={
+                "title": "Pusta branza", "excerpt": "e", "tags": "",
+                "branch": "   ", "status": "draft",
+                "body_source": "<p>x</p>",
+            },
+        )
+        post = Post.query.filter_by(title="Pusta branza").first()
+        assert post.branch is None
+
+    def test_unchecking_is_concept_clears_the_flag(self, auth_client, db):
+        auth_client.post(
+            "/admin/post/new",
+            data={
+                "title": "Koncepcyjny", "excerpt": "e", "tags": "",
+                "is_concept": "y", "status": "draft",
+                "body_source": "<p>x</p>",
+            },
+        )
+        post = Post.query.filter_by(title="Koncepcyjny").first()
+        assert post.is_concept is True
+
+        # Odznaczony checkbox nie jest w ogóle wysyłany przez przeglądarkę.
+        auth_client.post(
+            f"/admin/post/{post.id}/edit",
+            data={
+                "title": "Koncepcyjny", "excerpt": "e", "tags": "",
+                "status": "draft", "body_source": "<p>x</p>",
+            },
+        )
+        db.session.refresh(post)
+        assert post.is_concept is False

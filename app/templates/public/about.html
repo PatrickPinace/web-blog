@@ -3,8 +3,24 @@
 {% block title %}O blogu — {{ config.BLOG_TITLE }}{% endblock %}
 
 {% block content %}
-  <h1>O blogu</h1>
-  <p>{{ config.BLOG_DESCRIPTION }}</p>
-  <p><em>Treść strony "O blogu" — do uzupełnienia w etapie 7 (patrz plan,
-     sekcja 8: nota o cold starcie ma się tu znaleźć).</em></p>
+<main class="wrap" style="padding-bottom:140px">
+  <div class="page">
+    <h1>O blogu</h1>
+    <div class="prose" style="margin-top:32px">
+      <p>Piszę tu o stronach dla małych firm: co klient dostaje, ile to trwa
+        i dlaczego niektóre rzeczy odradzam. Opisy realizacji są
+        <strong>koncepcyjne</strong> — powstały jako przykłady rozwiązań, nie
+        jako sprawozdania z płatnych zleceń. Każdy taki wpis ma to napisane
+        przy tytule.</p>
+      <p>Druga część bloga jest techniczna: notatki o tym, jak zbudowany jest
+        ten serwis — Flask, PostgreSQL, renderowanie po stronie serwera, treść
+        wpisu jako fragment HTML z edytora.</p>
+      <h2>Kontakt</h2>
+      <p>Najprościej mailem. Odpowiadam w ciągu dnia roboczego.</p>
+    </div>
+    <p class="note">Blog działa na darmowym hostingu. Po dłuższej bezczynności
+      serwer usypia, więc pierwsze wejście potrafi potrwać kilkanaście sekund —
+      kolejne są już natychmiastowe.</p>
+  </div>
+</main>
 {% endblock %}

@@ -1,4 +1,5 @@
 import os
+from datetime import UTC, datetime
 
 from flask import Flask
 
@@ -30,6 +31,7 @@ def create_app(config_name=None):
 
     from app import cli, errors, security
     from app.utils import uploads
+    from app.utils.content import read_time
     from app.utils.embeds import render_embeds
 
     cli.register(app)
@@ -41,5 +43,12 @@ def create_app(config_name=None):
     # Zamienia placeholdery embedów na iframe'y dopiero przy wyświetlaniu —
     # w bazie nigdy nie leży osadzony kod ramki (app/utils/embeds.py).
     app.jinja_env.filters["render_embeds"] = render_embeds
+    app.jinja_env.filters["read_time"] = read_time
+
+    @app.context_processor
+    def inject_globals():
+        # Rok do stopki — liczony przy renderowaniu, żeby nie zamarzł na
+        # roku wdrożenia (instancja potrafi żyć miesiącami).
+        return {"current_year": datetime.now(UTC).year}
 
     return app

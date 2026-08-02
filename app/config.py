@@ -26,6 +26,13 @@ class Config:
     BLOG_AUTHOR = os.environ.get("BLOG_AUTHOR", "")
     BLOG_BASE_URL = os.environ.get("BLOG_BASE_URL", "http://localhost:5000")
 
+    # Linki w stopce. Puste = ikona się nie renderuje (patrz base.html) -
+    # nie chcemy martwych linków "#" wskazujących na nic.
+    BLOG_EMAIL = os.environ.get("BLOG_EMAIL", "minor.michal1@gmail.com")
+    BLOG_FACEBOOK_URL = os.environ.get("BLOG_FACEBOOK_URL", "")
+    BLOG_INSTAGRAM_URL = os.environ.get("BLOG_INSTAGRAM_URL", "")
+    BLOG_X_URL = os.environ.get("BLOG_X_URL", "")
+
     SESSION_COOKIE_HTTPONLY = True
     SESSION_COOKIE_SAMESITE = "Lax"
 

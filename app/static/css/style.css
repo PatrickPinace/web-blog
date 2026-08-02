@@ -324,6 +324,9 @@ img{max-width:100%;display:block}
 .site-footer span,.site-footer a{font-family:var(--mono);font-size:.72rem;color:var(--faint)}
 .site-footer a:hover{color:var(--accent)}
 .site-footer nav{display:flex;gap:20px;flex-wrap:wrap}
+.social-links{gap:14px !important}
+.social-links a{display:flex}
+.social-links svg{width:16px;height:16px}
 
 /* ---------- responsywność ---------- */
 @media (max-width:960px){

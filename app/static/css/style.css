@@ -516,6 +516,18 @@ img{max-width:100%;display:block}
   display:inline-block;padding:3px 9px;border-radius:99px;border:1px solid var(--line)}
 .admin .status--draft{color:var(--faint)}
 .admin .status--published{color:var(--accent);border-color:var(--accent-soft);background:var(--accent-soft)}
+/* Status jest teraz też przyciskiem (przełącznik szkic/opublikowany z listy) —
+   reset domyślnych stylów <button>, żeby wyglądał identycznie jak wcześniej.
+   Selektor .admin td button.admin-status-toggle (nie tylko button.admin-status-toggle)
+   żeby wygrać specyficznością z `.admin td button:hover{color:#e5484d}` niżej w pliku. */
+.admin td button.admin-status-toggle.status{background:none;cursor:pointer;
+  transition:filter .15s ease}
+.admin td button.admin-status-toggle.status--draft{background:var(--surface)}
+.admin td button.admin-status-toggle:hover{color:inherit;filter:brightness(0.92)}
+html[data-theme="dark"] .admin td button.admin-status-toggle:hover{filter:brightness(1.3)}
+@media (prefers-color-scheme:dark){
+  html:not([data-theme]) .admin td button.admin-status-toggle:hover{filter:brightness(1.3)}
+}
 .admin .toolbar{display:flex;flex-wrap:wrap;gap:18px;align-items:center;margin-bottom:26px;
   font-family:var(--mono);font-size:.72rem;letter-spacing:.05em}
 .admin .editor-tools{display:flex;flex-wrap:wrap;gap:8px;margin:10px 0 0}
@@ -525,6 +537,16 @@ img{max-width:100%;display:block}
 .admin .filters a{color:var(--faint);transition:color .15s ease}
 .admin .filters a:hover{color:var(--text)}
 .admin .filters a.is-active{color:var(--accent)}
+
+/* Szukaj + filtr typu/branży na pulpicie — osobna klasa (nie input[type=text])
+   bo pole jest type=search, i żeby nie mieszać z resztą .admin input. */
+.dashboard-search{display:flex;flex-wrap:wrap;gap:10px;align-items:center;margin:0 0 26px}
+.dashboard-search input[type=search],.dashboard-search select{
+  padding:9px 12px;font-family:var(--sans);font-size:.88rem;color:var(--text);
+  background:var(--surface);border:1px solid var(--line);border-radius:7px}
+.dashboard-search input[type=search]{flex:1;min-width:200px}
+.dashboard-search input[type=search]:focus,.dashboard-search select:focus{
+  outline:none;border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-soft)}
 
 /* Akcje w tabeli: „Edytuj · Podgląd · Usuń”. Usuń jest <button>, więc bez
    tego dostaje domyślny szary przycisk systemowy obok dwóch linków. */

@@ -36,7 +36,7 @@
       {%- endif -%}
     </p>
 
-    <form method="post" novalidate>
+    <form method="post" novalidate data-dirty-guard>
       {{ form.hidden_tag() }}
 
       {{ field(form.title) }}
@@ -113,4 +113,5 @@
 {% block scripts %}
   <script src="{{ url_for('static', filename='vendor/quill/quill.js') }}"></script>
   <script src="{{ url_for('static', filename='js/admin-editor.js') }}"></script>
+  <script src="{{ url_for('static', filename='js/admin-dirty-guard.js') }}"></script>
 {% endblock %}

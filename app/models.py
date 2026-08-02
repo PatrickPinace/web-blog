@@ -107,6 +107,11 @@ class Post(db.Model):
             self.published_at = utcnow()
         self.status = self.STATUS_PUBLISHED
 
+    def unpublish(self):
+        # published_at zostaje nietknięte — to data PIERWSZEJ publikacji,
+        # nie flaga "aktualnie widoczny". Ponowna publikacja jej nie zmienia.
+        self.status = self.STATUS_DRAFT
+
     def __repr__(self):
         return f"<Post {self.slug!r} ({self.status})>"
 

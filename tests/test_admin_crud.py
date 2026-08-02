@@ -157,6 +157,128 @@ class TestDashboardFilter:
         assert b"Szkic" in response.data
         assert b"Publiczny" not in response.data
 
+    def test_search_matches_title(self, auth_client, db, admin):
+        db.session.add_all([
+            Post(title="Flask od zera", slug="flask-od-zera", body_source="",
+                 body_html="", author_id=admin.id),
+            Post(title="Zupelnie co innego", slug="co-innego", body_source="",
+                 body_html="", author_id=admin.id),
+        ])
+        db.session.commit()
+
+        response = auth_client.get("/admin/?q=flask")
+        assert b"Flask od zera" in response.data
+        assert b"Zupelnie co innego" not in response.data
+
+    def test_search_includes_drafts(self, auth_client, db, admin):
+        db.session.add(Post(
+            title="Szkic o flasku", slug="szkic-o-flasku", body_source="",
+            body_html="", author_id=admin.id, status=Post.STATUS_DRAFT,
+        ))
+        db.session.commit()
+
+        response = auth_client.get("/admin/?q=flasku")
+        assert b"Szkic o flasku" in response.data
+
+    def test_kind_filter_narrows_list(self, auth_client, db, admin):
+        db.session.add_all([
+            Post(title="Notatka", slug="notatka", body_source="", body_html="",
+                 author_id=admin.id, kind=Post.KIND_NOTE),
+            Post(title="Realizacja", slug="realizacja", body_source="", body_html="",
+                 author_id=admin.id, kind=Post.KIND_CASE_STUDY),
+        ])
+        db.session.commit()
+
+        response = auth_client.get(f"/admin/?kind={Post.KIND_NOTE}")
+        assert b"Notatka" in response.data
+        assert b"Realizacja" not in response.data
+
+    def test_branch_filter_narrows_list(self, auth_client, db, admin):
+        db.session.add_all([
+            Post(title="Gastronomia post", slug="gastro", body_source="",
+                 body_html="", author_id=admin.id, branch="gastronomia"),
+            Post(title="Edukacja post", slug="edu", body_source="",
+                 body_html="", author_id=admin.id, branch="edukacja"),
+        ])
+        db.session.commit()
+
+        response = auth_client.get("/admin/?branch=gastronomia")
+        assert b"Gastronomia post" in response.data
+        assert b"Edukacja post" not in response.data
+
+    def test_invalid_kind_value_is_ignored(self, auth_client, db, admin):
+        db.session.add(Post(
+            title="Normalny wpis", slug="normalny", body_source="", body_html="",
+            author_id=admin.id,
+        ))
+        db.session.commit()
+
+        response = auth_client.get("/admin/?kind=../../etc")
+        assert response.status_code == 200
+        assert b"Normalny wpis" in response.data
+
+
+class TestPostStatusToggle:
+    def test_toggle_publishes_draft(self, auth_client, client, db, admin):
+        post = Post(
+            title="Do publikacji", slug="do-publikacji", body_source="", body_html="",
+            author_id=admin.id, status=Post.STATUS_DRAFT,
+        )
+        db.session.add(post)
+        db.session.commit()
+
+        auth_client.post(f"/admin/post/{post.id}/toggle-status")
+        db.session.refresh(post)
+        assert post.status == Post.STATUS_PUBLISHED
+        assert post.published_at is not None
+        assert client.get(f"/post/{post.slug}").status_code == 200
+
+    def test_toggle_unpublishes_and_keeps_published_at(self, auth_client, client, db, admin):
+        post = Post(
+            title="Do cofniecia", slug="do-cofniecia", body_source="", body_html="",
+            author_id=admin.id,
+        )
+        post.publish()
+        db.session.add(post)
+        db.session.commit()
+        first_published_at = post.published_at
+
+        auth_client.post(f"/admin/post/{post.id}/toggle-status")
+        db.session.refresh(post)
+        assert post.status == Post.STATUS_DRAFT
+        assert post.published_at == first_published_at
+        assert client.get(f"/post/{post.slug}").status_code == 404
+
+    def test_toggle_redirects_to_filtered_dashboard_via_referrer(self, auth_client, db, admin):
+        post = Post(
+            title="Filtrowany", slug="filtrowany", body_source="", body_html="",
+            author_id=admin.id, status=Post.STATUS_DRAFT,
+        )
+        db.session.add(post)
+        db.session.commit()
+
+        response = auth_client.post(
+            f"/admin/post/{post.id}/toggle-status",
+            headers={"Referer": "http://localhost/admin/?status=draft"},
+        )
+        assert response.status_code == 302
+        assert response.location == "/admin/?status=draft"
+
+    def test_toggle_ignores_external_referrer(self, auth_client, db, admin):
+        post = Post(
+            title="Zewnetrzny referrer", slug="zewnetrzny-referrer", body_source="",
+            body_html="", author_id=admin.id, status=Post.STATUS_DRAFT,
+        )
+        db.session.add(post)
+        db.session.commit()
+
+        response = auth_client.post(
+            f"/admin/post/{post.id}/toggle-status",
+            headers={"Referer": "http://evil.example/steal"},
+        )
+        assert response.status_code == 302
+        assert response.location == "/admin/"
+
 
 class TestPostMetadataFields:
     """kind / branch / is_concept — pola dodane razem z designem (etap 6a)."""

@@ -1,3 +1,5 @@
+from urllib.parse import urlparse
+
 from argon2 import PasswordHasher
 from argon2.exceptions import VerifyMismatchError
 from flask import abort, flash, jsonify, redirect, render_template, request, url_for
@@ -10,12 +12,14 @@ from app.admin.forms import (
     LabelForm,
     LoginForm,
     PostForm,
+    PostStatusForm,
 )
 from app.extensions import db, limiter
 from app.models import Image, Label, Post, Tag, User
 from app.public.routes import render_post_body
 from app.utils.embeds import build_youtube_placeholder
 from app.utils.sanitize import SANITIZER_VERSION, sanitize_html
+from app.utils.search import search_posts
 from app.utils.slugify import slugify, unique_slug
 from app.utils.uploads import UploadError, is_allowed_image_url, upload_image
 
@@ -57,16 +61,35 @@ def logout():
 @login_required
 def dashboard():
     status_filter = request.args.get("status")
+    kind_filter = request.args.get("kind")
+    branch_filter = request.args.get("branch")
+    search_query = request.args.get("q", "").strip()
+
     query = Post.query.order_by(Post.created_at.desc())
     if status_filter in (Post.STATUS_DRAFT, Post.STATUS_PUBLISHED):
         query = query.filter_by(status=status_filter)
+    if kind_filter in Post.KINDS:
+        query = query.filter_by(kind=kind_filter)
+    elif branch_filter:
+        query = query.filter_by(branch=branch_filter)
     posts = query.all()
+
+    if search_query:
+        posts = search_posts(posts, search_query)
+
     delete_form = DeletePostForm()
+    status_form = PostStatusForm()
     return render_template(
         "admin/dashboard.html",
         posts=posts,
         status_filter=status_filter,
+        kind_filter=kind_filter,
+        branch_filter=branch_filter,
+        search_query=search_query,
+        branches=_dashboard_branches(),
+        kinds=Post.KINDS,
         delete_form=delete_form,
+        status_form=status_form,
     )
 
 
@@ -107,6 +130,29 @@ def _label_choices():
     return [(label.id, label.name) for label in Label.query.order_by(Label.name).all()]
 
 
+def _dashboard_branches():
+    """Branże wszystkich wpisów (w tym szkiców) — inaczej niż get_branches()
+    na stronie publicznej, która celowo liczy tylko opublikowane."""
+    rows = (
+        Post.query.filter(Post.branch.isnot(None), Post.branch != "")
+        .with_entities(Post.branch)
+        .distinct()
+        .order_by(Post.branch)
+        .all()
+    )
+    return [row[0] for row in rows]
+
+
+def _safe_admin_redirect(target):
+    """request.referrer to nagłówek kontrolowany przez klienta — przekierowanie
+    tylko na lokalną ścieżkę w /admin/, nigdy wprost na dowolny URL z niego."""
+    if target:
+        parsed = urlparse(target)
+        if parsed.path.startswith("/admin/"):
+            return parsed.path + (f"?{parsed.query}" if parsed.query else "")
+    return url_for("admin.dashboard")
+
+
 @admin_bp.route("/post/<int:post_id>/preview")
 @login_required
 def post_preview(post_id):
@@ -136,6 +182,23 @@ def post_delete(post_id):
     db.session.commit()
     flash("Wpis usunięty.", "success")
     return redirect(url_for("admin.dashboard"))
+
+
+@admin_bp.route("/post/<int:post_id>/toggle-status", methods=["POST"])
+@login_required
+def post_toggle_status(post_id):
+    form = PostStatusForm()
+    if not form.validate_on_submit():
+        abort(400)
+    post = Post.query.get_or_404(post_id)
+    if post.is_published:
+        post.unpublish()
+        flash("Wpis wrócił do szkiców.", "success")
+    else:
+        post.publish()
+        flash("Wpis opublikowany.", "success")
+    db.session.commit()
+    return redirect(_safe_admin_redirect(request.referrer))
 
 
 @admin_bp.route("/labels", methods=["GET", "POST"])

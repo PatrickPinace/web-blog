@@ -13,17 +13,42 @@
       <a class="button-like" href="{{ url_for('admin.labels') }}">Znaczki</a>
       <span class="filters">
         <a class="{{ 'is-active' if not status_filter }}"
-           href="{{ url_for('admin.dashboard') }}">wszystkie</a>
+           href="{{ url_for('admin.dashboard', kind=kind_filter, branch=branch_filter, q=search_query) }}">wszystkie</a>
         <a class="{{ 'is-active' if status_filter == 'draft' }}"
-           href="{{ url_for('admin.dashboard', status='draft') }}">szkice</a>
+           href="{{ url_for('admin.dashboard', status='draft', kind=kind_filter, branch=branch_filter, q=search_query) }}">szkice</a>
         <a class="{{ 'is-active' if status_filter == 'published' }}"
-           href="{{ url_for('admin.dashboard', status='published') }}">opublikowane</a>
+           href="{{ url_for('admin.dashboard', status='published', kind=kind_filter, branch=branch_filter, q=search_query) }}">opublikowane</a>
       </span>
       <form action="{{ url_for('admin.logout') }}" method="post" style="margin-left:auto">
         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
         <button class="button-like" type="submit">Wyloguj</button>
       </form>
     </div>
+
+    <form method="get" class="dashboard-search">
+      {% if status_filter %}<input type="hidden" name="status" value="{{ status_filter }}">{% endif %}
+      <input type="search" name="q" value="{{ search_query }}" placeholder="Szukaj w tytule, opisie, tagach…"
+             aria-label="Szukaj wpisów">
+      <select name="kind" data-exclusive-with="branch">
+        <option value="">Typ: wszystkie</option>
+        {% for k in kinds %}
+          <option value="{{ k }}" {{ 'selected' if k == kind_filter }}>{{ k }}</option>
+        {% endfor %}
+      </select>
+      {% if branches %}
+        <select name="branch" data-exclusive-with="kind">
+          <option value="">Branża: wszystkie</option>
+          {% for b in branches %}
+            <option value="{{ b }}" {{ 'selected' if b == branch_filter }}>{{ b }}</option>
+          {% endfor %}
+        </select>
+      {% endif %}
+      <button class="button-like" type="submit">Szukaj</button>
+      {% if search_query or kind_filter or branch_filter %}
+        <a class="button-like"
+           href="{{ url_for('admin.dashboard', status=status_filter) }}">Wyczyść</a>
+      {% endif %}
+    </form>
 
     {% if posts %}
       <table>
@@ -42,9 +67,15 @@
               </td>
               <td>{{ post.kind }}{% if post.branch %} · {{ post.branch }}{% endif %}</td>
               <td>
-                <span class="status status--{{ 'published' if post.is_published else 'draft' }}">
-                  {{ 'Opublikowany' if post.is_published else 'Szkic' }}
-                </span>
+                <form action="{{ url_for('admin.post_toggle_status', post_id=post.id) }}" method="post"
+                      class="status-toggle">
+                  {{ status_form.hidden_tag() }}
+                  <button type="submit"
+                          class="admin-status-toggle status status--{{ 'published' if post.is_published else 'draft' }}"
+                          title="{{ 'Cofnij do szkiców' if post.is_published else 'Opublikuj' }}">
+                    {{ 'Opublikowany' if post.is_published else 'Szkic' }}
+                  </button>
+                </form>
               </td>
               <td>
                 <a href="{{ url_for('admin.post_edit', post_id=post.id) }}">Edytuj</a> ·

@@ -61,6 +61,12 @@ class DeletePostForm(FlaskForm):
     pass
 
 
+class PostStatusForm(FlaskForm):
+    """Pusty formularz — CSRF na przełączniku statusu z listy wpisów."""
+
+    pass
+
+
 class LabelForm(FlaskForm):
     name = StringField("Nazwa", validators=[DataRequired(), Length(max=40)])
     color = SelectField(

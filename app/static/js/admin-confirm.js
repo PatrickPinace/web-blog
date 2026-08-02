@@ -11,6 +11,13 @@
   });
 
   document.addEventListener("change", function (event) {
+    var exclusiveWith = event.target.getAttribute("data-exclusive-with");
+    if (exclusiveWith) {
+      var sibling = event.target.form.elements[exclusiveWith];
+      if (sibling) sibling.value = "";
+      event.target.form.requestSubmit();
+      return;
+    }
     var form = event.target.closest("[data-submit-on-change]");
     if (form) {
       form.requestSubmit();

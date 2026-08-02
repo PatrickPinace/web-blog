@@ -9,8 +9,9 @@ Projekt jest jednocześnie **działającym blogiem** i **template'em do reużyci
 konfiguracja przez zmienne środowiskowe, branding w jednym miejscu, instrukcja
 forka poniżej.
 
-> 🚧 **Status: w budowie.** Etap 5 z 8 (testy i hardening) ukończony,
-> deploy jeszcze nie wykonany. Live URL pojawi się tutaj po wdrożeniu.
+> 🚧 **Status: w budowie.** Konfiguracja deployu (etap 6) gotowa —
+> Dockerfile i instrukcja poniżej. Faktyczne wdrożenie wymaga kont na
+> Neon/Cloudinary/Koyeb. Live URL pojawi się tutaj po pierwszym deployu.
 
 ---
 
@@ -109,13 +110,70 @@ Branding jest wyciągnięty do konfiguracji — nie trzeba grzebać w szablonach
 
 ## Wdrożenie
 
-Docelowo: **Koyeb** (aplikacja) + **Neon** (Postgres) + **Cloudinary**
-(obrazki) — w całości na darmowych planach.
+**Koyeb** (aplikacja) + **Neon** (Postgres) + **Cloudinary** (obrazki) —
+w całości na darmowych planach. Uzasadnienie tej kombinacji zamiast
+oczywistego "Render" czy "Fly.io" jest w `workdir/plan.md`, sekcja 3
+(skrót: darmowa baza na Renderze wygasa po 30 dniach, Fly.io nie ma już
+darmowego tieru dla nowych kont).
 
-Zmienne środowiskowe na produkcji: `DATABASE_URL`, `SECRET_KEY`,
-`CLOUDINARY_URL`, `FLASK_ENV=production`.
+### 1. Baza danych — Neon
 
-Szczegółowa instrukcja pojawi się po etapie 6.
+1. Załóż konto na [neon.tech](https://neon.tech), utwórz projekt.
+2. Skopiuj connection string z zakładki *Connection Details* — wygląda jak
+   `postgresql://user:pass@ep-xxx.neon.tech/dbname?sslmode=require`.
+3. Dopisz do niego sterownik, żeby pasował do naszej konfiguracji:
+   `postgresql://` → `postgresql+psycopg://` (patrz `.env.example`).
+
+### 2. Obrazki — Cloudinary
+
+1. Załóż konto na [cloudinary.com](https://cloudinary.com).
+2. Na Dashboardzie skopiuj **API Environment variable** (`CLOUDINARY_URL`) —
+   gotowy do wklejenia bez edycji.
+
+### 3. Aplikacja — Koyeb
+
+1. Załóż konto na [koyeb.com](https://koyeb.com), połącz z GitHubem.
+2. Utwórz Web Service z tego repozytorium, branch `main`. Koyeb wykryje
+   `Dockerfile` automatycznie (builder: Dockerfile).
+3. Port aplikacji: `8000` (ustawiony w Dockerfile przez `EXPOSE` i w
+   komendzie startowej gunicorna).
+4. Zmienne środowiskowe (zakładka *Environment variables*):
+
+   | Zmienna | Wartość |
+   |---|---|
+   | `SECRET_KEY` | `python -c "import secrets; print(secrets.token_hex(32))"` |
+   | `DATABASE_URL` | connection string z Neona (z `postgresql+psycopg://`) |
+   | `CLOUDINARY_URL` | z Dashboardu Cloudinary |
+   | `BLOG_TITLE`, `BLOG_DESCRIPTION`, `BLOG_AUTHOR` | wg własnego brandingu |
+   | `BLOG_BASE_URL` | finalny URL z Koyeb, np. `https://xxx.koyeb.app` |
+
+   `FLASK_ENV=production` jest już ustawione na stałe w Dockerfile — nie
+   trzeba go dodawać ręcznie.
+5. Deploy. Migracje (`flask db upgrade`) uruchamiają się automatycznie przy
+   starcie kontenera — patrz `CMD` w `Dockerfile`.
+
+### 4. Konto administratora
+
+Jednorazowo, przez konsolę Koyeb (zakładka *Instances* → *Exec* na żywej
+instancji, albo `koyeb service exec`):
+
+```bash
+flask create-admin
+```
+
+### 5. Weryfikacja po wdrożeniu
+
+- [ ] Strona główna ładuje się po HTTPS
+- [ ] `/admin/login` działa, logowanie ustawionym kontem przechodzi
+- [ ] Utworzenie draftu → sprawdzić, że `/post/<slug>` zwraca 404
+- [ ] Publikacja wpisu → widoczny publicznie
+- [ ] Cold start: odczekać >1h bez ruchu, zmierzyć czas pierwszego wejścia
+
+### Jeśli Koyeb zażąda karty płatniczej
+
+Plan B: **Render** (Web Service, free tier) zamiast Koyeba, baza zostaje na
+Neonie (nie na wygasającej po 30 dniach bazie Rendera). Reszta konfiguracji
+bez zmian — Dockerfile jest przenośny między hostingami.
 
 ### Uwaga o pierwszym wejściu
 

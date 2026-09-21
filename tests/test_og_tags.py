@@ -46,6 +46,12 @@ class TestOgTags:
         assert b'property="og:image" content="https://example.com/cover.jpg"' in response.data
         assert b'name="twitter:card" content="summary_large_image"' in response.data
 
+    def test_mobile_preview_toggle_absent_on_public_page(self, client, db, admin):
+        post = _publish(db, admin, "Wpis", "wpis-bez-toggle")
+        response = client.get(f"/post/{post.slug}")
+        assert b"data-preview-mobile-toggle" not in response.data
+        assert b"admin-preview-mobile.js" not in response.data
+
     def test_index_has_website_og_type_not_article(self, client):
         response = client.get("/")
         assert b'property="og:type" content="website"' in response.data

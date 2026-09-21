@@ -22,6 +22,25 @@ class TestLogin:
         assert response.request.path == "/admin/"
 
 
+class TestContentDiffToggle:
+    def test_shown_on_edit_form(self, auth_client, db, admin):
+        post = Post(title="Wpis", slug="wpis-diff", body_source="<p>x</p>",
+                    body_html="<p>x</p>", author_id=admin.id)
+        db.session.add(post)
+        db.session.commit()
+
+        response = auth_client.get(f"/admin/post/{post.id}/edit")
+        body = response.get_data(as_text=True)
+        assert "data-show-diff" in body
+        assert "admin-content-diff.js" in body
+
+    def test_absent_on_new_post_form(self, auth_client):
+        response = auth_client.get("/admin/post/new")
+        body = response.get_data(as_text=True)
+        assert "data-show-diff" not in body
+        assert "admin-content-diff.js" not in body
+
+
 class TestTagAutocomplete:
     def test_new_post_form_lists_existing_tag_names(self, auth_client, db):
         from app.models import Tag
@@ -670,6 +689,19 @@ class TestTrash:
 
         response = auth_client.get(f"/admin/post/{post.id}/preview")
         assert response.status_code == 404
+
+    def test_preview_shows_mobile_toggle(self, auth_client, db, admin):
+        post = Post(
+            title="Z podgladem", slug="z-podgladem",
+            body_source="<p>x</p>", body_html="<p>x</p>", author_id=admin.id,
+        )
+        db.session.add(post)
+        db.session.commit()
+
+        response = auth_client.get(f"/admin/post/{post.id}/preview")
+        body = response.get_data(as_text=True)
+        assert "data-preview-mobile-toggle" in body
+        assert "admin-preview-mobile.js" in body
 
     def test_deleted_published_post_disappears_from_public_site(
         self, auth_client, client, db, admin

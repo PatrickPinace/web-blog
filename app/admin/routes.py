@@ -297,6 +297,7 @@ def post_preview(post_id):
         related_posts=[],
         post_url=None,
         og_image_url=None,
+        was_updated_after_publish=False,
     )
 
 

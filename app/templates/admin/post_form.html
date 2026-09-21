@@ -112,6 +112,9 @@
                       data-endpoint="{{ url_for('admin.check_image_url_endpoint') }}">Obrazek z URL</button>
               <button type="button" class="button-like" id="embed-youtube"
                       data-endpoint="{{ url_for('admin.embed_youtube_endpoint') }}">Wstaw film YouTube</button>
+              {% if post %}
+                <button type="button" class="button-like" data-show-diff>Co zmieniłem?</button>
+              {% endif %}
             </div>
 
             {# Treść startowa przekazywana przez wartość pola, nie przez wstrzyknięcie
@@ -125,6 +128,16 @@
           {{ form.body_source() }}
         </div>
       </fieldset>
+
+      {% if post %}
+        <div class="diff-panel" data-diff-panel hidden>
+          <div class="diff-panel-head">
+            <span class="label">Zmiany od zapisanej wersji</span>
+            <button type="button" data-diff-close aria-label="Zamknij">&times;</button>
+          </div>
+          <div class="diff-panel-body" data-diff-body></div>
+        </div>
+      {% endif %}
 
       <fieldset class="admin-section admin-section--publish">
         <legend>Publikacja</legend>
@@ -157,4 +170,7 @@
   <script src="{{ url_for('static', filename='js/admin-dirty-guard.js') }}"></script>
   <script src="{{ url_for('static', filename='js/admin-schedule-field.js') }}"></script>
   <script src="{{ url_for('static', filename='js/admin-classification-fields.js') }}"></script>
+  {% if post %}
+    <script src="{{ url_for('static', filename='js/admin-content-diff.js') }}"></script>
+  {% endif %}
 {% endblock %}

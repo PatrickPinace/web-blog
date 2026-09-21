@@ -208,7 +208,7 @@ img{max-width:100%;display:block}
 .back{display:inline-block;font-family:var(--mono);font-size:.74rem;color:var(--muted);transition:color .2s}
 .back:hover{color:var(--accent)}
 .post-meta{display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin:32px 0 18px}
-.post-meta time,.post-meta .read,.post-meta .views{font-family:var(--mono);font-size:.72rem;color:var(--faint)}
+.post-meta time,.post-meta .read,.post-meta .views,.post-meta .updated{font-family:var(--mono);font-size:.72rem;color:var(--faint)}
 .post-meta .sep{width:3px;height:3px;border-radius:50%;background:var(--faint)}
 .flag{display:inline-flex;align-items:center;gap:7px;font-family:var(--mono);font-size:.66rem;letter-spacing:.1em;
   text-transform:uppercase;color:var(--accent);background:var(--accent-soft);border-radius:3px;padding:5px 10px}
@@ -471,7 +471,23 @@ img{max-width:100%;display:block}
 
 .preview-banner{margin:0 0 28px;padding:12px 16px;border-radius:4px;
   border:1px dashed var(--accent);background:var(--accent-soft);
-  font-family:var(--mono);font-size:.74rem;letter-spacing:.04em;color:var(--text)}
+  font-family:var(--mono);font-size:.74rem;letter-spacing:.04em;color:var(--text);
+  display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}
+.preview-banner p{margin:0}
+.preview-mobile-toggle{font-family:var(--mono);font-size:.7rem;letter-spacing:.04em;
+  color:var(--accent);background:var(--bg);border:1px solid var(--accent);border-radius:4px;
+  padding:6px 12px;cursor:pointer;white-space:nowrap;transition:background-color .15s ease}
+.preview-mobile-toggle:hover{background:var(--accent-soft)}
+.preview-mobile-toggle.is-active{background:var(--accent);color:#fff}
+
+/* Podgląd mobilny: zawęża treść do szerokości typowego telefonu, żeby
+   zobaczyć formatowanie (tabele, galerie) bez fizycznego resize okna. */
+[data-preview-main].preview-mobile{max-width:390px;margin:0 auto;
+  border-left:1px solid var(--line);border-right:1px solid var(--line);
+  padding-left:16px;padding-right:16px}
+[data-preview-main].preview-mobile .post-layout{grid-template-columns:1fr}
+[data-preview-main].preview-mobile .toc-desktop{display:none}
+[data-preview-main].preview-mobile .toc-mobile{display:block}
 
 /* Wpis koncepcyjny — jawne oznaczenie, że klient jest fikcyjny. Ta druga
    definicja .flag (bez tła/paddingu) nadpisuje tę z linii ~204. */
@@ -695,6 +711,24 @@ html[data-theme="dark"] .admin td button.admin-status-toggle:hover{filter:bright
    w nieskończoność poza ekran. */
 #editor-root{background:var(--bg)}
 .editor-shell .ql-container{min-height:300px;max-height:62vh;overflow-y:auto}
+
+/* Panel "Co zmieniłem?" — word-diff w przeglądarce, bez zapisu na serwer. */
+.diff-panel{margin-top:14px;border:1px solid var(--line);border-radius:9px;
+  background:var(--surface);overflow:hidden}
+.diff-panel-head{display:flex;align-items:center;justify-content:space-between;
+  padding:11px 14px;border-bottom:1px solid var(--line)}
+.diff-panel-head .label{font-family:var(--mono);font-size:.68rem;letter-spacing:.08em;
+  text-transform:uppercase;color:var(--muted)}
+.diff-panel-head button{font-size:1.1rem;line-height:1;color:var(--faint);
+  background:transparent;border:none;cursor:pointer;padding:2px 6px}
+.diff-panel-head button:hover{color:var(--text)}
+.diff-panel-body{padding:16px 18px;max-height:320px;overflow-y:auto;
+  font-size:.92rem;line-height:1.7;color:var(--text)}
+.diff-panel-body ins{background:var(--accent-soft);color:var(--accent);
+  text-decoration:none;border-radius:2px;padding:0 2px}
+.diff-panel-body del{background:rgba(209,73,91,.12);color:#d1495b;
+  text-decoration:line-through;border-radius:2px;padding:0 2px}
+.diff-empty{color:var(--faint);font-size:.88rem}
 
 /* Pełne przejęcie stylów Quilla. Wysoka specyficzność (.editor-shell +
    .ql-snow), bo vendorowy quill.snow.css jest zminifikowany i ładowany

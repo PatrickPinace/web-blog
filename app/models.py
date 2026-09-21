@@ -97,6 +97,11 @@ class Post(db.Model):
     # akcja tylko z widoku kosza.
     deleted_at = db.Column(db.DateTime(timezone=True), nullable=True, index=True)
 
+    # Odwiedziny liczone przy /post/<slug> — patrz record_view() w
+    # app/public/queries.py: deduplikacja przez cookie sesyjne, boty odsiane
+    # po User-Agent. Orientacyjny wskaźnik popularności, nie ścisła analityka.
+    views_count = db.Column(db.Integer, nullable=False, default=0)
+
     author_id = db.Column(db.Integer, db.ForeignKey("user.id"), nullable=False)
     author = db.relationship("User", back_populates="posts")
 

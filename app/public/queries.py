@@ -1,9 +1,13 @@
+from flask import current_app, request
 from sqlalchemy import func
 
 from app.extensions import db
 from app.models import Post, PostActivity, Tag, post_tags, utcnow
+from app.utils.content import is_bot_user_agent
 
 POSTS_PER_PAGE = 10
+
+VIEWED_POSTS_COOKIE = "wb_viewed"
 
 # Ile tagów pokazać w pasku filtrów na stronie głównej, zanim schowamy
 # resztę za linkiem do /tagi. Przy kilku tagach nie widać różnicy; przy
@@ -82,16 +86,82 @@ def get_neighbours(post):
     return previous, following
 
 
-def get_blog_stats():
-    """Liczby na stronę główną: ile wpisów, ile branż."""
-    posts = published_posts_query().count()
-    branches = (
-        Post.query.filter_by(status=Post.STATUS_PUBLISHED, deleted_at=None)
-        .filter(Post.branch.isnot(None), Post.branch != "")
-        .with_entities(func.count(func.distinct(Post.branch)))
-        .scalar()
+def get_blog_build_series_posts():
+    """Zwraca publicznie dostępne części serii w kolejności konfiguracji.
+
+    To wspólne źródło dla strony głównej, /about i nawigacji wpisu. Bazujemy
+    na ``published_posts_query()``, więc szkice, kosz i wpisy zaplanowane na
+    przyszłość nie mogą ujawnić nawet tytułu. Wpis zaplanowany na przeszłość
+    jest najpierw promowany tą samą leniwą regułą co reszta części publicznej.
+    """
+    slugs = current_app.config.get("BLOG_BUILD_SERIES_SLUGS", ())
+    if isinstance(slugs, str):
+        slugs = tuple(slug.strip() for slug in slugs.split(",") if slug.strip())
+    if not slugs:
+        return []
+
+    posts_by_slug = {
+        post.slug: post
+        for post in published_posts_query().filter(Post.slug.in_(slugs)).all()
+    }
+    return [posts_by_slug[slug] for slug in slugs if slug in posts_by_slug]
+
+
+def get_series_neighbours(post, series_posts):
+    """Zwraca sąsiadów z serii albo ``(None, None)`` poza serią."""
+    for index, series_post in enumerate(series_posts):
+        if series_post.id == post.id:
+            previous = series_posts[index - 1] if index else None
+            following = series_posts[index + 1] if index + 1 < len(series_posts) else None
+            return previous, following
+    return None, None
+
+
+def record_view(post):
+    """Liczy odwiedziny wpisu, chyba że to bot albo ten czytelnik już go
+    dziś... właściwie w tej sesji przeglądarki widział.
+
+    Deduplikacja przez cookie sesyjne (bez Max-Age — ginie z zamknięciem
+    przeglądarki): jeden slug liczy się raz na sesję, więc F5 czy powrót
+    nawigacją nie napompowuje licznika. To orientacyjny wskaźnik
+    popularności, nie ścisła analityka — stąd brak IP/fingerprintingu.
+
+    Zwraca zaktualizowaną listę odwiedzonych slugów do zapisania w cookie,
+    albo None, jeśli nic się nie zmieniło (bot albo wpis już widziany).
+    """
+    if is_bot_user_agent(request.headers.get("User-Agent")):
+        return None
+
+    raw = request.cookies.get(VIEWED_POSTS_COOKIE, "")
+    viewed = [slug for slug in raw.split(",") if slug]
+    if post.slug in viewed:
+        return None
+
+    post.views_count += 1
+    db.session.commit()
+
+    viewed.append(post.slug)
+    return viewed
+
+
+RELATED_POSTS_LIMIT = 3
+
+
+def get_related_posts(post, limit=RELATED_POSTS_LIMIT):
+    """Inne opublikowane wpisy ze wspólnym tagiem, najnowsze najpierw.
+
+    Bez tagów na wpisie nie ma się do czego odwołać — zwracamy puste, żeby
+    strona wpisu nie dostawała losowego zestawu niepowiązanych artykułów.
+    """
+    if not post.tags:
+        return []
+    tag_ids = [tag.id for tag in post.tags]
+    return (
+        published_posts_query()
+        .filter(Post.id != post.id, Post.tags.any(Tag.id.in_(tag_ids)))
+        .limit(limit)
+        .all()
     )
-    return {"posts": posts, "branches": branches or 0}
 
 
 def get_top_tags(limit=TOP_TAGS_LIMIT):
@@ -109,14 +179,30 @@ def get_top_tags(limit=TOP_TAGS_LIMIT):
     )
 
 
-def get_branches():
-    """Unikalne branże opublikowanych wpisów, z licznikiem, do filtra."""
-    rows = (
-        Post.query.filter_by(status=Post.STATUS_PUBLISHED, deleted_at=None)
-        .filter(Post.branch.isnot(None), Post.branch != "")
-        .with_entities(Post.branch, func.count(Post.id))
-        .group_by(Post.branch)
-        .order_by(Post.branch)
+def get_kind_counts():
+    """Liczba opublikowanych wpisów każdego typu (realizacja/notatka/felieton),
+    do przełącznika na stronie głównej. Typy bez żadnego opublikowanego
+    wpisu są pominięte — pusty filtr byłby ślepym zaułkiem dla czytelnika."""
+    counts = dict(
+        published_posts_query()
+        .with_entities(Post.kind, func.count(Post.id))
+        .group_by(Post.kind)
         .all()
     )
-    return [{"name": name, "count": count} for name, count in rows]
+    return [(kind, counts[kind]) for kind in Post.KINDS if kind in counts]
+
+
+def get_branches():
+    """Branże z co najmniej jednym opublikowanym wpisem, alfabetycznie,
+    do przełącznika na stronie głównej (patrz get_kind_counts — sama zasada)."""
+    return [
+        branch
+        for branch, in (
+            published_posts_query()
+            .filter(Post.branch.isnot(None))
+            .with_entities(Post.branch)
+            .distinct()
+            .order_by(Post.branch)
+            .all()
+        )
+    ]

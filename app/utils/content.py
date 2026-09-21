@@ -14,8 +14,15 @@ _WORDS_PER_MINUTE = 200
 _TAG_RE = re.compile(r"<[^>]+>")
 _WHITESPACE_RE = re.compile(r"\s+")
 
+# Pierwszy obraz z treści — jedyne dostępne źródło og:image, bo Image.post_id
+# nigdy nie jest wypełniane (upload przez Quill wstawia gołe <img>, bez
+# powiązania z Post — patrz app/admin/routes.py: upload_image_endpoint).
+_IMG_SRC_RE = re.compile(r'<img\b[^>]*\bsrc="([^"]+)"', re.IGNORECASE)
+
 # Nagłówki H2/H3 z treści. H1 pomijamy — tytuł wpisu jest w nagłówku strony,
 # nie w treści, więc w spisie treści byłby zdublowany.
+_TABLE_RE = re.compile(r"(<table\b[^>]*>.*?</table>)", re.IGNORECASE | re.DOTALL)
+
 _HEADING_RE = re.compile(
     r"<(h[23])(\s[^>]*)?>(.*?)</\1>", re.IGNORECASE | re.DOTALL
 )
@@ -25,6 +32,15 @@ _HEADING_RE = re.compile(
 _ID_UNSAFE_RE = re.compile(r"[^a-z0-9]+")
 
 _PL_MAP = str.maketrans("ąćęłńóśźż", "acelnoszz")
+
+# Słowa-klucze łapiące najpopularniejsze crawlery i narzędzia HTTP. Nie jest
+# to lista wyczerpująca (i nie musi być) — cel to odsianie oczywistych botów
+# z licznika wyświetleń, nie dokładna klasyfikacja ruchu.
+_BOT_USER_AGENT_RE = re.compile(
+    r"bot|crawl|spider|curl|wget|python-requests|facebookexternalhit|"
+    r"slackbot|discordbot|telegrambot|whatsapp|preview",
+    re.IGNORECASE,
+)
 
 
 def pluralize_pl(count, singular, plural_few, plural_many):
@@ -41,6 +57,25 @@ def pluralize_pl(count, singular, plural_few, plural_many):
     if last_digit in (2, 3, 4) and last_two not in (12, 13, 14):
         return plural_few
     return plural_many
+
+
+def is_bot_user_agent(user_agent):
+    """True dla User-Agentów rozpoznanych jako bot/crawler/narzędzie HTTP.
+
+    Puste/brakujące User-Agent też liczymy jako bota — prawdziwe przeglądarki
+    zawsze je wysyłają, więc brak jest sam w sobie podejrzany.
+    """
+    if not user_agent:
+        return True
+    return bool(_BOT_USER_AGENT_RE.search(user_agent))
+
+
+def first_image_url(html):
+    """URL pierwszego obrazu w treści, albo None gdy wpis nie ma żadnego."""
+    if not html:
+        return None
+    match = _IMG_SRC_RE.search(html)
+    return match.group(1) if match else None
 
 
 def strip_tags(html):
@@ -70,6 +105,16 @@ def _heading_id(text, used):
         suffix += 1
     used.add(candidate)
     return candidate
+
+
+
+def wrap_tables(html):
+    """Dodaje lokalny kontener przewijania wokół tabel z edytora.
+
+    Quill zapisuje gołe ``<table>``. Wrapper powstaje dopiero przy renderze,
+    więc nie zmieniamy zapisanej treści ani whitelisty sanitizera.
+    """
+    return _TABLE_RE.sub(r'<div class="table-wrapper">\1</div>', html or "")
 
 
 def add_heading_ids(html):

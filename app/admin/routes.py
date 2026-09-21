@@ -294,6 +294,9 @@ def post_preview(post_id):
         prev_post=None,
         next_post=None,
         is_preview=True,
+        related_posts=[],
+        post_url=None,
+        og_image_url=None,
     )
 
 

@@ -1,20 +1,26 @@
-from flask import render_template, request
+from flask import Response, current_app, jsonify, make_response, render_template, request, url_for
 from sqlalchemy.orm import joinedload
 
 from app.models import Post, Tag
 from app.public import public_bp
 from app.public.feed import build_rss_feed
+from app.public.sitemap import build_sitemap
 from app.public.queries import (
     POSTS_PER_PAGE,
-    get_blog_stats,
+    VIEWED_POSTS_COOKIE,
+    get_blog_build_series_posts,
     get_branches,
+    get_kind_counts,
     get_neighbours,
     get_published_post_or_404,
+    get_related_posts,
+    get_series_neighbours,
     get_top_tags,
     promote_scheduled_posts,
     published_posts_query,
+    record_view,
 )
-from app.utils.content import add_heading_ids
+from app.utils.content import add_heading_ids, first_image_url, wrap_tables
 from app.utils.embeds import render_embeds
 from app.utils.search import search_posts
 
@@ -27,26 +33,32 @@ def render_post_body(post):
     na już zsanityzowanym `body_html` i tylko w locie, nic tu nie wraca
     do bazy. Zwraca (html, spis_treści).
     """
-    return add_heading_ids(render_embeds(post.body_html))
+    return add_heading_ids(wrap_tables(render_embeds(post.body_html)))
 
 
 @public_bp.route("/")
 def index():
     page = request.args.get("page", 1, type=int)
     branch = request.args.get("branza", "").strip()
+    kind = request.args.get("typ", "").strip()
 
     query = published_posts_query()
     if branch:
         query = query.filter(Post.branch == branch)
+    if kind in Post.KINDS:
+        query = query.filter(Post.kind == kind)
+    else:
+        kind = ""
 
     pagination = query.paginate(page=page, per_page=POSTS_PER_PAGE, error_out=False)
     return render_template(
         "public/index.html",
         pagination=pagination,
-        tags=get_top_tags(),
-        branches=get_branches(),
         active_branch=branch,
-        stats=get_blog_stats(),
+        active_kind=kind,
+        kind_counts=get_kind_counts(),
+        branches=get_branches(),
+        series_posts=get_blog_build_series_posts(),
     )
 
 
@@ -54,15 +66,34 @@ def index():
 def post_detail(slug):
     post = get_published_post_or_404(slug)
     body_html, headings = render_post_body(post)
-    previous, following = get_neighbours(post)
-    return render_template(
+    series_posts = get_blog_build_series_posts()
+    previous, following = get_series_neighbours(post, series_posts)
+    navigation_kind = (
+        "series" if any(series_post.id == post.id for series_post in series_posts) else "chronological"
+    )
+    if navigation_kind == "chronological":
+        previous, following = get_neighbours(post)
+
+    base_url = current_app.config["BLOG_BASE_URL"].rstrip("/")
+    post_url = f"{base_url}{url_for('public.post_detail', slug=post.slug)}"
+
+    response = make_response(render_template(
         "public/post_detail.html",
         post=post,
         body_html=body_html,
         headings=headings,
         prev_post=previous,
         next_post=following,
-    )
+        navigation_kind=navigation_kind,
+        related_posts=get_related_posts(post),
+        post_url=post_url,
+        og_image_url=first_image_url(post.body_html),
+    ))
+
+    viewed = record_view(post)
+    if viewed is not None:
+        response.set_cookie(VIEWED_POSTS_COOKIE, ",".join(viewed), httponly=True, samesite="Lax")
+    return response
 
 
 @public_bp.route("/tag/<slug>")
@@ -118,11 +149,47 @@ def search():
     return render_template("public/search.html", query=query, results=results)
 
 
+@public_bp.route("/szukaj/live")
+def search_live():
+    query = request.args.get("q", "").strip()
+    if not query:
+        return jsonify(results=[])
+
+    candidates = published_posts_query().options(joinedload(Post.tags)).all()
+    results = search_posts(candidates, query)[:8]
+    return jsonify(
+        results=[
+            {
+                "title": post.title,
+                "excerpt": post.excerpt,
+                "url": url_for("public.post_detail", slug=post.slug),
+            }
+            for post in results
+        ]
+    )
+
+
 @public_bp.route("/about")
 def about():
-    return render_template("public/about.html")
+    return render_template("public/about.html", series_posts=get_blog_build_series_posts())
 
 
 @public_bp.route("/feed.xml")
 def feed():
     return build_rss_feed()
+
+
+@public_bp.route("/sitemap.xml")
+def sitemap():
+    return build_sitemap()
+
+
+@public_bp.route("/robots.txt")
+def robots():
+    base_url = current_app.config["BLOG_BASE_URL"].rstrip("/")
+    body = (
+        "User-agent: *\n"
+        "Disallow: /admin/\n"
+        f"Sitemap: {base_url}{url_for('public.sitemap')}\n"
+    )
+    return Response(body, mimetype="text/plain")

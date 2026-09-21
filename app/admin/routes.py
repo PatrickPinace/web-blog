@@ -26,6 +26,7 @@ from app.models import (
     Label,
     Post,
     PostActivity,
+    PostRevision,
     Tag,
     User,
     post_labels,
@@ -276,7 +277,66 @@ def post_history(post_id):
         .order_by(PostActivity.created_at.desc())
         .all()
     )
-    return render_template("admin/post_history.html", post=post, activity=activity)
+    revisions = (
+        PostRevision.query.filter_by(post_id=post.id)
+        .order_by(PostRevision.created_at.desc())
+        .all()
+    )
+    # body_source jest surowym wyjściem Quilla — bezpieczne do ponownej
+    # edycji, ale NIGDY do wyświetlenia przez `| safe` bez sanityzacji
+    # (patrz komentarz w post_detail.html: to jedyne miejsce z `| safe`,
+    # i tylko na już zsanityzowanym body_html). Sanityzujemy tu ad-hoc,
+    # tylko do podglądu — nic z tego nie wraca do bazy.
+    revision_previews = {
+        revision.id: sanitize_html(revision.body_source) for revision in revisions
+    }
+    return render_template(
+        "admin/post_history.html",
+        post=post,
+        activity=activity,
+        revisions=revisions,
+        revision_previews=revision_previews,
+    )
+
+
+@admin_bp.route("/post/<int:post_id>/revision/<int:revision_id>/restore", methods=["POST"])
+@login_required
+def post_revision_restore(post_id, revision_id):
+    """Przywraca title/excerpt/body_source z wybranej wersji.
+
+    Zapisuje NAJPIERW snapshot bieżącej treści (jak przywracanie z kosza —
+    odwracalne, nie destrukcyjne), potem nadpisuje pola z revision i
+    przelicza body_html. Wpis zostaje w swoim bieżącym statusie — przywrócenie
+    treści nie publikuje ani nie chowa wpisu. Slug NIE jest przeliczany, mimo
+    że tytuł się zmienia (inaczej niż przy zwykłej edycji formularza) —
+    istniejące linki (RSS, wyszukiwarki, udostępnione) mają zostać żywe.
+    """
+    form = PostStatusForm()
+    if not form.validate_on_submit():
+        abort(400)
+    post = Post.query.filter(Post.deleted_at.is_(None), Post.id == post_id).first_or_404()
+    revision = PostRevision.query.filter_by(post_id=post.id, id=revision_id).first_or_404()
+
+    db.session.add(
+        PostRevision(
+            post_id=post.id,
+            user_id=current_user.id,
+            title=post.title,
+            excerpt=post.excerpt,
+            body_source=post.body_source,
+        )
+    )
+
+    post.title = revision.title
+    post.excerpt = revision.excerpt
+    post.body_source = revision.body_source
+    post.body_html = sanitize_html(post.body_source)
+    post.sanitizer_version = SANITIZER_VERSION
+
+    _log_activity(post, PostActivity.ACTION_UPDATED, ["title", "excerpt", "body_source"])
+    db.session.commit()
+    flash("Wersja przywrócona. Poprzednia treść zapisana jako nowa wersja.", "success")
+    return redirect(url_for("admin.post_history", post_id=post.id))
 
 
 @admin_bp.route("/post/<int:post_id>/preview")
@@ -628,6 +688,20 @@ def _apply_form_to_post(form, post, is_new):
         post, new_tags, new_labels, new_excerpt, new_kind, new_branch,
         new_is_concept, new_body_source, title_changed,
     )
+
+    # Snapshot PRZED nadpisaniem — tylko gdy treść faktycznie się zmienia,
+    # inaczej zapis tagów/klasyfikacji bez zmiany body_source tworzyłby
+    # wersję o identycznej treści co poprzednia (patrz docstring PostRevision).
+    if not is_new and "body_source" in changed_fields:
+        db.session.add(
+            PostRevision(
+                post_id=post.id,
+                user_id=current_user.id,
+                title=post.title,
+                excerpt=post.excerpt,
+                body_source=post.body_source,
+            )
+        )
 
     post.title = form.title.data
     post.excerpt = new_excerpt

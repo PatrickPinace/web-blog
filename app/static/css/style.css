@@ -686,6 +686,21 @@ html[data-theme="dark"] .admin td button.admin-status-toggle:hover{filter:bright
 /* Pasek narzędzi ma pełną szerokość, a skład tekstu w Quillu — miarę artykułu. */
 .admin-post-form form,.admin-post-form .editor-shell{max-width:920px}
 
+/* Wersje treści (/admin/post/<id>/historia) — lista <details>, każda
+   rozwija podgląd treści i przycisk przywrócenia. */
+.revision-list{list-style:none;margin:0;padding:0}
+.revision-item{border-bottom:1px solid var(--line-soft)}
+.revision-item summary{display:flex;gap:14px;align-items:baseline;padding:13px 0;
+  cursor:pointer;font-size:.9rem}
+.revision-item summary::marker{color:var(--faint)}
+.revision-item .admin-date{font-family:var(--mono);font-size:.76rem;color:var(--faint)}
+.revision-item .revision-title{color:var(--text);font-weight:500}
+.revision-body{padding:0 0 22px 22px}
+.revision-preview{margin:0 0 16px;padding:16px 18px;border:1px solid var(--line-soft);
+  border-radius:6px;background:var(--surface);max-height:280px;overflow-y:auto;
+  font-size:.92rem}
+.revision-preview.prose{font-size:.92rem;line-height:1.65}
+
 /* ---------- edytor ---------- */
 /* Toolbar akcji (upload/URL/YouTube) i toolbar Quilla siedzą na jednej
    „karcie” razem z polem edycji — inaczej wyglądają jak trzy niezależne

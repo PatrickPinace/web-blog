@@ -62,6 +62,7 @@ class TestAdminRequiresLogin:
             "/admin/labels/merge",
             "/admin/post/1/restore",
             "/admin/post/1/purge",
+            "/admin/post/1/revision/1/restore",
         ],
     )
     def test_post_requires_auth(self, client, path):

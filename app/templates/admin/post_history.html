@@ -32,8 +32,9 @@
     </div>
 
     <h1>Historia zmian</h1>
-    <p class="subtitle">Kto i kiedy edytował ten wpis — bez treści zmian,
-      tylko akcje i nazwy pól, które się zmieniły.</p>
+    <p class="subtitle">Kto i kiedy edytował ten wpis — akcje i nazwy pól,
+      które się zmieniły. Wersje treści (z podglądem i przywracaniem) są
+      niżej.</p>
 
     {% if activity %}
       <table>
@@ -62,6 +63,42 @@
     {% else %}
       <p><em>Brak zarejestrowanych zmian.</em></p>
     {% endif %}
+
+    <h2>Wersje treści</h2>
+    <p class="subtitle">Snapshot title/excerpt/treści z chwili PRZED każdą
+      zmianą treści — nie każdą zmianą wpisu, tylko treści. Przywrócenie nie
+      zmienia adresu wpisu (URL) i samo staje się nową wersją do odwrócenia.</p>
+
+    {% if revisions %}
+      <ul class="revision-list">
+        {% for revision in revisions %}
+          <li class="revision-item">
+            <details>
+              <summary>
+                <span class="admin-date">{{ revision.created_at.strftime('%d.%m.%Y %H:%M') }}</span>
+                <span>{{ revision.user.username if revision.user else 'system' }}</span>
+                <span class="revision-title">{{ revision.title }}</span>
+              </summary>
+              <div class="revision-body">
+                {% if revision.excerpt %}<p class="hint">{{ revision.excerpt }}</p>{% endif %}
+                <div class="revision-preview prose">{{ revision_previews[revision.id] | safe }}</div>
+                <form method="post" action="{{ url_for('admin.post_revision_restore', post_id=post.id, revision_id=revision.id) }}"
+                      data-confirm="Przywrócić tę wersję? Bieżąca treść zostanie zapisana jako nowa wersja.">
+                  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                  <button type="submit" class="btn btn-ghost">Przywróć tę wersję</button>
+                </form>
+              </div>
+            </details>
+          </li>
+        {% endfor %}
+      </ul>
+    {% else %}
+      <p><em>Brak zapisanych wersji — pojawią się po pierwszej zmianie treści.</em></p>
+    {% endif %}
   </div>
 </main>
+{% endblock %}
+
+{% block scripts %}
+  <script src="{{ url_for('static', filename='js/admin-confirm.js') }}"></script>
 {% endblock %}

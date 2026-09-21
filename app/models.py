@@ -120,6 +120,12 @@ class Post(db.Model):
         cascade="all, delete-orphan",
         order_by="PostActivity.created_at.desc()",
     )
+    revisions = db.relationship(
+        "PostRevision",
+        back_populates="post",
+        cascade="all, delete-orphan",
+        order_by="PostRevision.created_at.desc()",
+    )
 
     @property
     def is_published(self):
@@ -195,6 +201,35 @@ class PostActivity(db.Model):
 
     def __repr__(self):
         return f"<PostActivity post_id={self.post_id} {self.action!r}>"
+
+
+class PostRevision(db.Model):
+    """Snapshot treści wpisu tuż PRZED zapisaniem zmiany.
+
+    Rozszerza PostActivity (który zna tylko nazwy zmienionych pól) —
+    trzymamy wartości title/excerpt/body_source z chwili przed edycją,
+    żeby dało się zobaczyć różnicę i przywrócić starszą wersję. Zapisywane
+    tylko gdy body_source faktycznie się zmienia (patrz _apply_form_to_post
+    w app/admin/routes.py) — drobne zmiany tagów/klasyfikacji bez zmiany
+    treści nie tworzą nowej wersji, inaczej tabela rosłaby przy każdym
+    kliknięciu "Zapisz" niezależnie od tego, co realnie się zmieniło.
+    """
+
+    id = db.Column(db.Integer, primary_key=True)
+    post_id = db.Column(db.Integer, db.ForeignKey("post.id"), nullable=False, index=True)
+    user_id = db.Column(db.Integer, db.ForeignKey("user.id"), nullable=True)
+
+    title = db.Column(db.String(200), nullable=False)
+    excerpt = db.Column(db.String(500), nullable=True)
+    body_source = db.Column(db.Text, nullable=False)
+
+    created_at = db.Column(db.DateTime(timezone=True), default=utcnow, nullable=False)
+
+    post = db.relationship("Post", back_populates="revisions")
+    user = db.relationship("User")
+
+    def __repr__(self):
+        return f"<PostRevision post_id={self.post_id} created_at={self.created_at!r}>"
 
 
 class Tag(db.Model):

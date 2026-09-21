@@ -31,6 +31,7 @@ from app.utils.content import (
     wrap_tables,
 )
 from app.utils.embeds import render_embeds
+from app.utils.glossary import render_glossary_terms
 from app.utils.search import search_posts
 
 
@@ -40,9 +41,13 @@ def render_post_body(post):
     Kolejność jest istotna. `render_embeds` wstawia iframe'y z placeholderów,
     a `add_heading_ids` dokleja kotwice do nagłówków — obie operacje działają
     na już zsanityzowanym `body_html` i tylko w locie, nic tu nie wraca
-    do bazy. Zwraca (html, spis_treści).
+    do bazy. `render_glossary_terms` idzie PRZED `add_heading_ids`, żeby
+    nagłówki, które ono wykrywa przez regex, jeszcze nie mają wstawionych
+    atrybutów `id` (nie zmienia to nic funkcjonalnie, ale trzyma regexy
+    obu funkcji niezależne od siebie). Zwraca (html, spis_treści).
     """
     html = add_image_loading_attrs(wrap_tables(render_embeds(post.body_html)))
+    html = render_glossary_terms(html, post.slug)
     return add_heading_ids(html)
 
 

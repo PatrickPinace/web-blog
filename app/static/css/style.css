@@ -293,6 +293,20 @@ img{max-width:100%;display:block}
 .prose img{max-width:100%;height:auto;border-radius:4px}
 .prose .dropcap{float:left;font-size:3.1rem;line-height:.82;font-weight:600;letter-spacing:-.04em;margin:6px 12px 0 0;color:var(--accent)}
 
+/* Popover z definicją pojęcia — czysty CSS, bez JS. :focus obsługuje tap
+   na dotyku (tabindex="0" na spanie) tak samo jak klawiaturę; :hover myszkę. */
+.prose .glossary-term{position:relative;border-bottom:1px dashed var(--accent);
+  cursor:help;outline:none}
+.prose .glossary-term::after{content:attr(data-definition);position:absolute;
+  bottom:calc(100% + 8px);left:0;z-index:10;width:min(320px,80vw);
+  padding:10px 14px;border-radius:6px;background:var(--text);color:var(--bg);
+  font-family:var(--sans);font-size:.82rem;font-weight:400;line-height:1.5;
+  letter-spacing:normal;box-shadow:0 8px 22px rgba(0,0,0,.18);
+  opacity:0;visibility:hidden;transform:translateY(4px);
+  transition:opacity .15s ease,transform .15s ease}
+.prose .glossary-term:hover::after,.prose .glossary-term:focus::after{
+  opacity:1;visibility:visible;transform:translateY(0)}
+
 /* galeria */
 .prose figure{margin:2.6rem 0}
 .prose figcaption{margin-top:.7rem;font-family:var(--mono);font-size:.72rem;line-height:1.5;color:var(--faint)}

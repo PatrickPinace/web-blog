@@ -206,3 +206,28 @@ def get_branches():
             .all()
         )
     ]
+
+
+# Etykieta dla realizacji bez przypisanej branży — grupa zbiorcza na
+# /realizacje, żeby żaden opublikowany case study nie zgubił się z widoku
+# mimo brakującego pola (opcjonalnego w formularzu).
+UNBRANCHED_LABEL = "inne"
+
+
+def get_case_studies_by_branch():
+    """Opublikowane realizacje pogrupowane po branży, alfabetycznie po
+    nazwie branży (grupa "inne" na końcu), najnowsze wpisy w grupie
+    najpierw — do widoku /realizacje (karta per branża)."""
+    posts = (
+        published_posts_query()
+        .filter(Post.kind == Post.KIND_CASE_STUDY)
+        .all()
+    )
+    groups = {}
+    for post in posts:
+        groups.setdefault(post.branch or UNBRANCHED_LABEL, []).append(post)
+
+    ordered_branches = sorted(b for b in groups if b != UNBRANCHED_LABEL)
+    if UNBRANCHED_LABEL in groups:
+        ordered_branches.append(UNBRANCHED_LABEL)
+    return [(branch, groups[branch]) for branch in ordered_branches]

@@ -31,7 +31,7 @@ def create_app(config_name=None):
 
     from app import cli, errors, security
     from app.utils import uploads
-    from app.utils.content import pluralize_pl, read_time
+    from app.utils.content import pluralize_pl, read_time, time_ago_pl
     from app.utils.embeds import render_embeds
 
     cli.register(app)
@@ -44,6 +44,7 @@ def create_app(config_name=None):
     # w bazie nigdy nie leży osadzony kod ramki (app/utils/embeds.py).
     app.jinja_env.filters["render_embeds"] = render_embeds
     app.jinja_env.filters["read_time"] = read_time
+    app.jinja_env.filters["time_ago_pl"] = time_ago_pl
     app.jinja_env.globals["pluralize_pl"] = pluralize_pl
 
     @app.context_processor

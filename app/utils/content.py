@@ -6,6 +6,7 @@ każdej edycji trzeba by pamiętać o ich przeliczeniu — a przy pierwszym
 zapomnieniu zaczęłyby kłamać.
 """
 import re
+from datetime import UTC
 
 # Średnie tempo czytania po polsku. Zaokrąglamy w górę, minimum 1 minuta —
 # "0 min czytania" wygląda na błąd, nie na krótki wpis.
@@ -18,6 +19,10 @@ _WHITESPACE_RE = re.compile(r"\s+")
 # nigdy nie jest wypełniane (upload przez Quill wstawia gołe <img>, bez
 # powiązania z Post — patrz app/admin/routes.py: upload_image_endpoint).
 _IMG_SRC_RE = re.compile(r'<img\b[^>]*\bsrc="([^"]+)"', re.IGNORECASE)
+
+# Każdy <img> z treści, do doklejenia loading/decoding przy renderze — Quill
+# nigdy nie generuje tych atrybutów, więc nie trzeba sprawdzać duplikatów.
+_IMG_TAG_RE = re.compile(r"<img\b[^>]*>", re.IGNORECASE)
 
 # Nagłówki H2/H3 z treści. H1 pomijamy — tytuł wpisu jest w nagłówku strony,
 # nie w treści, więc w spisie treści byłby zdublowany.
@@ -41,6 +46,49 @@ _BOT_USER_AGENT_RE = re.compile(
     r"slackbot|discordbot|telegrambot|whatsapp|preview",
     re.IGNORECASE,
 )
+
+
+# Margines między published_at i updated_at, żeby mikrosekundy odstępu
+# między dwoma wywołaniami utcnow() (jedno w Post.publish(), drugie
+# w onupdate przy flush) nie liczyły się jako "zaktualizowano".
+_UPDATED_AFTER_PUBLISH_THRESHOLD_SECONDS = 60
+
+
+def was_updated_after_publish(post):
+    """True, jeśli wpis został realnie edytowany po pierwszej publikacji."""
+    if post.published_at is None:
+        return False
+    published_at, updated_at = post.published_at, post.updated_at
+    if published_at.tzinfo is None:
+        published_at = published_at.replace(tzinfo=UTC)
+    if updated_at.tzinfo is None:
+        updated_at = updated_at.replace(tzinfo=UTC)
+    delta = (updated_at - published_at).total_seconds()
+    return delta > _UPDATED_AFTER_PUBLISH_THRESHOLD_SECONDS
+
+
+def time_ago_pl(dt):
+    """Czas względny po polsku: "przed chwilą", "3 dni temu", "2 miesiące temu".
+
+    `dt` bez tzinfo jest traktowane jako UTC — SQLite (dev/testy) nie
+    zachowuje strefy mimo DateTime(timezone=True), tak jak w
+    app/admin/routes.py (dashboard_stats: oldest_draft_days).
+    """
+    from app.models import utcnow
+
+    if dt.tzinfo is None:
+        dt = dt.replace(tzinfo=UTC)
+    days = (utcnow() - dt).days
+
+    if days < 1:
+        return "przed chwilą"
+    if days < 30:
+        return f"{days} {pluralize_pl(days, 'dzień', 'dni', 'dni')} temu"
+    if days < 365:
+        months = days // 30
+        return f"{months} {pluralize_pl(months, 'miesiąc', 'miesiące', 'miesięcy')} temu"
+    years = days // 365
+    return f"{years} {pluralize_pl(years, 'rok', 'lata', 'lat')} temu"
 
 
 def pluralize_pl(count, singular, plural_few, plural_many):
@@ -68,6 +116,24 @@ def is_bot_user_agent(user_agent):
     if not user_agent:
         return True
     return bool(_BOT_USER_AGENT_RE.search(user_agent))
+
+
+def add_image_loading_attrs(html):
+    """Dokleja loading="lazy" decoding="async" do każdego <img> w treści.
+
+    Wstawiane przy renderze, tym samym wzorcem co render_embeds/wrap_tables —
+    sanitizer (bleach) nie przepuszcza tych atrybutów, więc nie mogą trafić
+    do zapisanego body_html; dopisujemy je dopiero na wyjściu.
+    """
+    if not html:
+        return html
+
+    def _add_attrs(match):
+        tag = match.group(0)
+        closing = "/>" if tag.endswith("/>") else ">"
+        return tag[: -len(closing)] + f' loading="lazy" decoding="async"{closing}'
+
+    return _IMG_TAG_RE.sub(_add_attrs, html)
 
 
 def first_image_url(html):

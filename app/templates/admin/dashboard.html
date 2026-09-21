@@ -73,6 +73,8 @@
     </form>
 
     {% if posts %}
+      <p class="table-scroll-hint" id="dashboard-table-hint">Przesuń tabelę w bok, aby zobaczyć status i akcje.</p>
+      <div class="table-scroll dashboard-table-scroll" role="region" aria-labelledby="dashboard-table-hint" tabindex="0">
       <table>
         <thead>
           <tr><th>Tytuł</th><th>Typ</th><th>Aktualizacja</th><th>Status</th><th>Akcje</th></tr>
@@ -131,6 +133,7 @@
           {% endfor %}
         </tbody>
       </table>
+      </div>
     {% else %}
       <p><em>Brak wpisów{% if status_filter %} o statusie „{{ status_filter }}”{% endif %}.</em></p>
     {% endif %}

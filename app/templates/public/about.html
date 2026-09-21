@@ -1,34 +1,46 @@
 {% extends "base.html" %}
 
-{% block title %}O blogu — {{ config.BLOG_TITLE }}{% endblock %}
+{% block title %}O projekcie i autorze — {{ config.BLOG_TITLE }}{% endblock %}
+{% block description %}Cel projektu, zakres autorskiej pracy, użyte technologie i uporządkowana seria o powstawaniu bloga.{% endblock %}
 
 {% block content %}
 <main class="wrap" style="padding-bottom:140px">
-  <div class="page">
-    <h1>O blogu</h1>
-    <div class="prose" style="margin-top:32px">
-      <p>Nazywam się Michał Minor, robię strony i aplikacje webowe, od
-        wizytówek dla gabinetów i praktyk po pełne systemy z backendem
-        (Django, Flask) i wdrożeniem na własnym serwerze. Ten blog jest
-        częścią mojego portfolio, obok
-        <a href="https://github.com/PatrickPinace" rel="noopener">GitHuba</a>.</p>
-      <p>Pierwsza część bloga to opisy realizacji: co klient dostaje, jak
-        wygląda praca nad taką stroną i dlaczego czasem wybieram prostsze
-        rozwiązanie (statyczna strona bez CMS-a) od bardziej rozbudowanego.
-        Część z tych wpisów jest <strong>koncepcyjna</strong>, powstała jako
-        przykład rozwiązania, nie jako sprawozdanie z płatnego zlecenia.
-        Każdy taki wpis ma to napisane przy tytule.</p>
-      <p>Druga część jest techniczna: notatki o tym, jak zbudowany jest ten
-        serwis (Flask, PostgreSQL, renderowanie po stronie serwera, treść
-        wpisu jako fragment HTML z własnego edytora, wdrożenie w Dockerze).</p>
-      <h2>Kontakt</h2>
-      <p>Najprościej mailem:
-        <a href="mailto:{{ config.BLOG_EMAIL }}">{{ config.BLOG_EMAIL }}</a>.
-        Odpowiadam w ciągu dnia roboczego.</p>
+  <div class="page about-page">
+    <header class="about-header">
+      <span class="hero-kicker">O projekcie i autorze</span>
+      <h1>O projekcie i autorze</h1>
+      <p>Ten blog jest jednocześnie miejscem publikacji i projektem, którego powstawanie opisuję. Możesz zobaczyć gotowy interfejs, a w tekstach poznać decyzje i kompromisy stojące za kolejnymi zmianami.</p>
+    </header>
+    <div class="prose">
+      <h2>Po co powstał ten blog</h2>
+      <p>Buduję miejsce do publikowania własnych tekstów i prezentowania warsztatu na konkretnym, używanym przeze mnie narzędziu. Zamiast opisywać projekt wyłącznie z zewnątrz, pokazuję jego rozwój: od struktury treści i wygody czytania po zaplecze potrzebne do przygotowania wpisu.</p>
+      <h2>Co jest moją pracą</h2>
+      <p>Projektuję strukturę i wygląd serwisu, rozwijam aplikację oraz integruję jej publiczną część z panelem autora. Odpowiadam też za modele danych, reguły publikacji, testy i sposób prezentowania treści.</p>
+      <p>Nie wszystko powstało od zera. Aplikacja korzysta z bibliotek i narzędzi open source. Edycję treści zapewnia Quill, osadzony i dostosowany w autorskim panelu. We wpisach o budowie rozdzielam własne rozwiązania od roli wykorzystanych bibliotek.</p>
+      <h2>Jak to działa</h2>
+      <p>Blog jest aplikacją we Flasku. Widoki powstają po stronie serwera w szablonach Jinja, a dane obsługuje SQLAlchemy. Publiczna część obejmuje wpisy, tagi, wyszukiwanie i RSS. Panel autora służy do pracy ze szkicami, publikacją i porządkowaniem treści. Quill odpowiada za edycję, a aplikacja zapisuje i filtruje HTML przed pokazaniem go czytelnikowi.</p>
+      <h2>Jak powstaje ten blog</h2>
+      <p>Seria prowadzi przez projekt w kolejności innej niż chronologia publikacji. Każda część opisuje konkretny problem, rozważane możliwości, podjętą decyzję i jej ograniczenia.</p>
+      {% if series_posts %}
+        <ol class="series-list">
+          {% for post in series_posts %}
+            <li><a href="{{ url_for('public.post_detail', slug=post.slug) }}">{{ post.title }}</a></li>
+          {% endfor %}
+        </ol>
+      {% else %}
+        <p class="series-empty">Pierwsze części serii są w przygotowaniu. Na tej stronie znajdziesz już założenia projektu i zakres mojej pracy.</p>
+      {% endif %}
+      {% if config.BLOG_AUTHOR %}
+        <h2>O autorze</h2>
+        <p>Nazywam się {{ config.BLOG_AUTHOR }}. Ten blog jest miejscem, w którym pokazuję pracę na konkretnych przykładach i opisuję powody decyzji, nie tylko końcowy efekt.</p>
+      {% endif %}
+      {% if config.BLOG_EMAIL or config.BLOG_GITHUB_URL or config.BLOG_PORTFOLIO_URL %}
+        <h2>Kontakt</h2>
+        {% if config.BLOG_EMAIL %}<p>Chcesz porozmawiać o projekcie lub mojej pracy? Napisz: <a href="mailto:{{ config.BLOG_EMAIL }}">{{ config.BLOG_EMAIL }}</a>.</p>{% endif %}
+        {% if config.BLOG_GITHUB_URL %}<p><a href="{{ config.BLOG_GITHUB_URL }}" rel="noopener">Zobacz kod na GitHubie</a>.</p>{% endif %}
+        {% if config.BLOG_PORTFOLIO_URL %}<p><a href="{{ config.BLOG_PORTFOLIO_URL }}" rel="noopener">Zobacz portfolio</a>.</p>{% endif %}
+      {% endif %}
     </div>
-    <p class="note">Blog działa na darmowym hostingu. Po dłuższej bezczynności
-      serwer usypia, więc pierwsze wejście potrafi potrwać kilkanaście sekund —
-      kolejne są już natychmiastowe.</p>
   </div>
 </main>
 {% endblock %}

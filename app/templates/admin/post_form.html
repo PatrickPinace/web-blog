@@ -19,7 +19,7 @@
 
 {% block content %}
 <main class="wrap">
-  <div class="admin admin--wide">
+  <div class="admin admin--wide admin-post-form">
     <div class="toolbar">
       <a href="{{ url_for('admin.dashboard') }}">&larr; Panel</a>
       {% if post %}
@@ -49,16 +49,23 @@
       <fieldset class="admin-section">
         <legend>Klasyfikacja</legend>
         {{ field(form.kind) }}
-        {{ field(form.branch, placeholder="np. gastronomia") }}
-
-        <div class="field">
-          <div class="checkbox">
-            {{ form.is_concept() }}
-            {{ form.is_concept.label }}
+        {# Bez JS pola pozostają dostępne; skrypt tylko zwija blok i nigdy
+           nie czyści ani nie wyłącza jego wartości. #}
+        <div class="case-study-fields" data-case-study-fields>
+          {{ field(form.branch, placeholder="np. gastronomia") }}
+          <div class="field">
+            <div class="checkbox">
+              {{ form.is_concept() }}
+              {{ form.is_concept.label }}
+            </div>
+            <p class="hint">Zaznacz, jeśli klient jest przykładem, a nie prawdziwym
+              zleceniem — wpis dostanie widoczną etykietę „Projekt koncepcyjny”.</p>
           </div>
-          <p class="hint">Zaznacz, jeśli klient jest przykładem, a nie prawdziwym
-            zleceniem — wpis dostanie widoczną etykietę „Projekt koncepcyjny”.</p>
         </div>
+        <p class="hint classification-retained-note" data-classification-retained hidden>
+          Zachowane dane klasyfikacji nie zostaną usunięte przy zapisie tego typu wpisu.
+          Aby je zmienić, wybierz ponownie „Realizacja”.
+        </p>
 
         <div class="field">
           {{ form.tags.label }}
@@ -149,4 +156,5 @@
   <script src="{{ url_for('static', filename='js/admin-tag-autocomplete.js') }}"></script>
   <script src="{{ url_for('static', filename='js/admin-dirty-guard.js') }}"></script>
   <script src="{{ url_for('static', filename='js/admin-schedule-field.js') }}"></script>
+  <script src="{{ url_for('static', filename='js/admin-classification-fields.js') }}"></script>
 {% endblock %}

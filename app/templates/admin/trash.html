@@ -15,6 +15,8 @@
       Przywróć wpis albo usuń go trwale — trwałe usunięcie nie ma cofnięcia.</p>
 
     {% if posts %}
+      <p class="table-scroll-hint" id="trash-table-hint">Przesuń tabelę w bok, aby zobaczyć wszystkie akcje.</p>
+      <div class="table-scroll dashboard-table-scroll" role="region" aria-labelledby="trash-table-hint" tabindex="0">
       <table>
         <thead>
           <tr><th>Tytuł</th><th>Typ</th><th>Usunięto</th><th>Akcje</th></tr>
@@ -41,6 +43,7 @@
           {% endfor %}
         </tbody>
       </table>
+      </div>
     {% else %}
       <p><em>Kosz jest pusty.</em></p>
     {% endif %}

@@ -45,6 +45,18 @@ def test_indent_class_survives_roundtrip(auth_client, db):
     assert "ql-indent-2" in post.body_html
 
 
+def test_heading_and_code_block_survive_roundtrip(auth_client, db):
+    body = '<h2>Nagłówek redakcyjny</h2><pre class="ql-syntax">print("kod")</pre>'
+    post = _create(auth_client, body)
+
+    _resave(auth_client, post, post.body_source)
+    db.session.refresh(post)
+
+    assert "<h2>Nagłówek redakcyjny</h2>" in post.body_html
+    assert 'class="ql-syntax"' in post.body_html
+    assert 'print("kod")' in post.body_html
+
+
 def test_table_survives_roundtrip(auth_client, db):
     body = "<table><tr><th>A</th><th>B</th></tr><tr><td>1</td><td>2</td></tr></table>"
     post = _create(auth_client, body)

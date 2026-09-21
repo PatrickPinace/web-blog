@@ -470,9 +470,16 @@ class TestPostMetadataFields:
             },
         )
         post = Post.query.filter_by(title="Bez kind").first()
-        assert post.kind == Post.KIND_CASE_STUDY
+        assert post.kind == Post.KIND_NOTE
         assert post.is_concept is False
         assert post.branch is None
+
+    def test_new_form_selects_note_by_default(self, auth_client):
+        response = auth_client.get("/admin/post/new")
+
+        assert response.status_code == 200
+        assert b'value="notatka"' in response.data
+        assert b"Notatka techniczna</option>" in response.data
 
     def test_essay_kind_is_accepted(self, auth_client, db):
         # Trzeci kind (obok realizacja/notatka) — wpisy niezwiązane z ofertą
@@ -488,6 +495,31 @@ class TestPostMetadataFields:
         )
         post = Post.query.filter_by(title="Felieton").first()
         assert post.kind == Post.KIND_ESSAY
+
+    def test_non_case_study_keeps_existing_classification_on_save(self, auth_client, db):
+        auth_client.post(
+            "/admin/post/new",
+            data={
+                "title": "Notatka z klasyfikacją", "excerpt": "e", "tags": "",
+                "kind": Post.KIND_NOTE, "branch": "edukacja", "is_concept": "y",
+                "status": "draft", "body_source": "<p>x</p>",
+            },
+        )
+        post = Post.query.filter_by(title="Notatka z klasyfikacją").first()
+
+        auth_client.post(
+            f"/admin/post/{post.id}/edit",
+            data={
+                "title": post.title, "excerpt": "poprawione", "tags": "",
+                "kind": Post.KIND_NOTE, "branch": "edukacja", "is_concept": "y",
+                "status": "draft", "body_source": "<h2>Zachowana treść</h2>",
+            },
+        )
+
+        db.session.refresh(post)
+        assert post.kind == Post.KIND_NOTE
+        assert post.branch == "edukacja"
+        assert post.is_concept is True
 
     def test_kind_rejects_value_outside_choices(self, auth_client, db):
         auth_client.post(

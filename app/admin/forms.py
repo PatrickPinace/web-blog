@@ -33,7 +33,9 @@ class PostForm(FlaskForm):
             (Post.KIND_NOTE, "Notatka techniczna"),
             (Post.KIND_ESSAY, "Felieton"),
         ],
-        default=Post.KIND_CASE_STUDY,
+        # Formularz nowych wpisów zaczyna od notatki; model zachowuje swój
+        # dawny domyślny typ realizacji, więc istniejące dane nie są zmieniane.
+        default=Post.KIND_NOTE,
     )
     branch = StringField(
         "Branża", validators=[Optional(), Length(max=80)]

@@ -1,59 +1,48 @@
-{# Lista wpisów współdzielona przez stronę główną i widok tagu.
-   Jedno miejsce na markup wiersza — inaczej oba widoki rozjeżdżają się
-   przy pierwszej zmianie designu. #}
-
-{% macro post_list(pagination, endpoint, endpoint_kwargs={}) %}
+{# Lista wpisów współdzielona przez stronę główną i widok tagu. #}
+{% macro post_list(pagination, endpoint, endpoint_kwargs={}, active_branch=None, active_kind=None) %}
   {% if pagination.items %}
     <ol class="post-index">
       {% for post in pagination.items %}
         <li class="reveal">
-          <a class="row" href="{{ url_for('public.post_detail', slug=post.slug) }}"
-             data-kind="{{ post.kind }}"
-             data-title="{{ post.title }}"
-             data-branch="{{ post.branch or '—' }}"
-             data-read="{{ post.body_html | read_time }} min"
-             data-status="{{ 'koncepcyjny' if post.is_concept else 'wdrożone' }}">
+          <a class="row" href="{{ url_for("public.post_detail", slug=post.slug) }}">
             <span class="wipe"></span>
-            <span class="num">{{ '%02d' % (loop.index + (pagination.page - 1) * pagination.per_page) }}</span>
             <span class="body">
               <span class="meta">
                 <span class="kind">{{ post.kind }}</span>
-                {% if post.branch %}<span class="branch">{{ post.branch }}</span>{% endif %}
-                {% for label in post.labels %}
-                  <span class="flag flag--{{ label.color }}"><span class="dot"></span>{{ label.name }}</span>
-                {% endfor %}
+                {% if post.is_concept %}<span class="flag"><span class="dot"></span>Projekt koncepcyjny</span>{% endif %}
               </span>
               <span class="title">{{ post.title }}</span>
               {% if post.excerpt %}<span class="lead">{{ post.excerpt }}</span>{% endif %}
             </span>
             <span class="side">
-              <time datetime="{{ post.published_at.isoformat() }}">{{ post.published_at.strftime('%d.%m.%Y') }}</time>
-              <span class="read-time">{{ post.body_html | read_time }} min</span>
+              <time datetime="{{ post.published_at.isoformat() }}">{{ post.published_at.strftime("%d.%m.%Y") }}</time>
+              <span class="read-time">{{ post.body_html | read_time }} min czytania</span>
               <span class="arrow">&rarr;</span>
             </span>
           </a>
         </li>
       {% endfor %}
     </ol>
-
     {% if pagination.pages > 1 %}
       <nav class="pagination" aria-label="Stronicowanie">
-        <span class="count">Strona {{ pagination.page }} / {{ pagination.pages }}</span>
+        <span class="count">Strona {{ pagination.page }} z {{ pagination.pages }}</span>
         <span class="links">
-          {% if pagination.has_prev %}
-            <a href="{{ url_for(endpoint, page=pagination.prev_num, **endpoint_kwargs) }}">&larr; Nowsze</a>
-          {% else %}
-            <span class="disabled">&larr; Nowsze</span>
-          {% endif %}
-          {% if pagination.has_next %}
-            <a href="{{ url_for(endpoint, page=pagination.next_num, **endpoint_kwargs) }}">Starsze &rarr;</a>
-          {% else %}
-            <span class="disabled">Starsze &rarr;</span>
-          {% endif %}
+          {% if pagination.has_prev %}<a href="{{ url_for(endpoint, page=pagination.prev_num, **endpoint_kwargs) }}">&larr; Nowsze wpisy</a>{% else %}<span class="disabled">&larr; Nowsze wpisy</span>{% endif %}
+          {% if pagination.has_next %}<a href="{{ url_for(endpoint, page=pagination.next_num, **endpoint_kwargs) }}">Starsze wpisy &rarr;</a>{% else %}<span class="disabled">Starsze wpisy &rarr;</span>{% endif %}
         </span>
       </nav>
     {% endif %}
   {% else %}
-    <p class="empty"><em>Brak wpisów.</em></p>
+    <div class="empty">
+      {% if active_branch and active_kind %}
+        <p>Brak wpisów typu „{{ active_kind }}” dla branży „{{ active_branch }}”.</p><a href="{{ url_for("public.index") }}">Pokaż wszystkie wpisy</a>
+      {% elif active_branch %}
+        <p>Brak opublikowanych wpisów dla branży „{{ active_branch }}”.</p><a href="{{ url_for("public.index") }}">Pokaż wszystkie wpisy</a>
+      {% elif active_kind %}
+        <p>Brak opublikowanych wpisów typu „{{ active_kind }}”.</p><a href="{{ url_for("public.index") }}">Pokaż wszystkie wpisy</a>
+      {% else %}
+        <p>Nie ma jeszcze opublikowanych wpisów. Wróć tu wkrótce albo zajrzyj na stronę projektu.</p><a href="{{ url_for("public.about") }}">O projekcie</a>
+      {% endif %}
+    </div>
   {% endif %}
 {% endmacro %}

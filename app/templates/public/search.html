@@ -7,10 +7,14 @@
 <main class="wrap" style="padding-bottom:140px">
   <div class="page" style="padding-top:88px;max-width:820px">
     <h1>Szukaj</h1>
-    <form class="search-form" method="get" action="{{ url_for('public.search') }}">
-      <input type="search" name="q" value="{{ query }}" placeholder="tytuł, opis, tag…" autofocus>
-      <button type="submit">Szukaj</button>
-    </form>
+    <div class="search-form-wrap">
+      <form class="search-form" method="get" action="{{ url_for('public.search') }}">
+        <input type="search" name="q" value="{{ query }}" placeholder="tytuł, opis, tag…"
+          autofocus autocomplete="off" data-live-search-input>
+        <button type="submit">Szukaj</button>
+      </form>
+      <ul class="live-search-results" data-live-search-results hidden></ul>
+    </div>
 
     {% if query %}
       {% if results %}
@@ -47,4 +51,8 @@
     {% endif %}
   </div>
 </main>
+{% endblock %}
+
+{% block scripts %}
+<script src="{{ url_for('static', filename='js/live-search.js') }}"></script>
 {% endblock %}

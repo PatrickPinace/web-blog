@@ -3,69 +3,68 @@
 
 {% block content %}
 <main class="wrap" style="padding-bottom:140px">
+  <div class="home-content">
+    <section class="hero">
+      <span class="hero-kicker reveal">Blog o projektowaniu i programowaniu</span>
+      <h1 class="reveal">Ten blog też jest moim projektem.</h1>
+      <p class="reveal">Projektuję i rozwijam go od interfejsu czytelnika po panel autora. Pokazuję tutaj decyzje, problemy i kolejne etapy powstawania — razem z ich ograniczeniami.</p>
+      <div class="hero-actions reveal">
+        <a class="btn btn-primary" href="{{ url_for("public.about") }}">Poznaj projekt</a>
+        {% if config.BLOG_REPOSITORY_URL %}<a class="btn btn-ghost" href="{{ config.BLOG_REPOSITORY_URL }}" rel="noopener">Zobacz kod</a>{% endif %}
+      </div>
+    </section>
 
-  <section class="hero">
-    <div>
-      <span class="hero-kicker reveal">{{ config.BLOG_DESCRIPTION }}</span>
-      <h1 class="reveal">Prosta strona, którą klient rozumie w trzydzieści sekund.</h1>
-      <p class="reveal">Opisy realizacji: co było do zrobienia, jak to rozwiązałem,
-        czego świadomie nie zrobiłem. Plus notatki techniczne o tym, jak zbudowany
-        jest ten blog.</p>
-    </div>
-    <div class="hero-stats reveal hide-md">
-      <span><b>{{ stats.posts }}</b> {{ pluralize_pl(stats.posts, 'wpis', 'wpisy', 'wpisów') }}</span>
-      <span><b>{{ stats.branches }}</b> {{ pluralize_pl(stats.branches, 'branża', 'branże', 'branż') }}</span>
-    </div>
-  </section>
+    <section class="start-here reveal" aria-labelledby="start-here-title">
+      <span class="label">Zacznij tutaj</span>
+      <h2 id="start-here-title">Jak powstaje ten blog</h2>
+      <p>Poznaj założenia projektu, zakres mojej pracy i uporządkowaną listę opublikowanych części serii.</p>
+      <a href="{{ url_for("public.post_detail", slug=series_posts[0].slug) if series_posts else url_for("public.about") }}">Przejdź do wprowadzenia &rarr;</a>
+    </section>
 
-  <div class="index-layout">
-    <div>
+    <section class="latest-posts" aria-labelledby="latest-posts-title">
       <div class="index-head">
-        <span class="label">Indeks realizacji</span>
-        <nav class="filters">
-          <a class="is-active" href="{{ url_for('public.index') }}">wszystkie</a>
-          {% for tag in tags %}
-            <a href="{{ url_for('public.tag_detail', slug=tag.slug) }}">{{ tag.name }}</a>
-          {% endfor %}
-          {% if tags %}<a href="{{ url_for('public.tags') }}" class="filters-more">wszystkie tagi →</a>{% endif %}
-        </nav>
+        <h2 id="latest-posts-title">Najnowsze wpisy</h2>
+        <a class="tags-link" href="{{ url_for("public.tags") }}">Przeglądaj tagi</a>
       </div>
 
-      {% if branches %}
-        {# Filtr po branży — osobny wymiar od tagów, jeden na raz. Widoczny
-           tylko gdy jest co filtrować: przy jednej branży nie ma sensu
-           pokazywać przełącznika z jedną opcją. #}
-        {% if branches|length > 1 %}
-          <nav class="filters filters--branch">
-            <a class="{{ 'is-active' if not active_branch }}" href="{{ url_for('public.index') }}">wszystkie branże</a>
-            {% for b in branches %}
-              <a class="{{ 'is-active' if active_branch == b.name }}"
-                 href="{{ url_for('public.index', branza=b.name) }}">{{ b.name }} ({{ b.count }})</a>
-            {% endfor %}
-          </nav>
-        {% endif %}
+      {% if kind_counts %}
+        <nav class="filters" aria-label="Filtruj po typie wpisu">
+          <a class="{{ 'is-active' if not active_kind }}"
+             href="{{ url_for("public.index", branza=active_branch or none) }}">wszystkie</a>
+          {% for kind, count in kind_counts %}
+            <a class="{{ 'is-active' if kind == active_kind }}"
+               href="{{ url_for("public.index", typ=kind, branza=active_branch or none) }}">{{ kind }} ({{ count }})</a>
+          {% endfor %}
+        </nav>
       {% endif %}
 
-      {{ post_list(pagination, "public.index", {"branza": active_branch} if active_branch else {}) }}
-    </div>
+      {% if branches %}
+        <nav class="filters" aria-label="Filtruj po branży">
+          <a class="{{ 'is-active' if not active_branch }}"
+             href="{{ url_for("public.index", typ=active_kind or none) }}">wszystkie branże</a>
+          {% for branch in branches %}
+            <a class="{{ 'is-active' if branch == active_branch }}"
+               href="{{ url_for("public.index", branza=branch, typ=active_kind or none) }}">{{ branch }}</a>
+          {% endfor %}
+        </nav>
+      {% endif %}
 
-    {# Podgląd wypełniany po najechaniu na wiersz (main.js). Bez JS zostaje
-       pierwszy wpis — sama lista działa niezależnie od tego panelu. #}
-    {% if pagination.items %}
-      {% set first = pagination.items[0] %}
-      <aside class="preview hide-md" data-preview>
-        <div class="box">
-          <span class="kind" data-preview-kind>{{ first.kind }}</span>
-          <p class="title" data-preview-title>{{ first.title }}</p>
-          <dl>
-            <div><dt>branża</dt><dd data-preview-branch>{{ first.branch or '—' }}</dd></div>
-            <div><dt>czytanie</dt><dd data-preview-read>{{ first.body_html | read_time }} min</dd></div>
-            <div><dt>status</dt><dd data-preview-status>{{ 'koncepcyjny' if first.is_concept else 'wdrożone' }}</dd></div>
-          </dl>
+      {% if active_branch or active_kind %}
+        <div class="filter-notice">
+          <p>
+            {% if active_kind and active_branch %}Wpisy: {{ active_kind }} · branża {{ active_branch }}
+            {% elif active_kind %}Wpisy: {{ active_kind }}
+            {% else %}Wpisy dla branży: {{ active_branch }}{% endif %}
+          </p>
+          <a href="{{ url_for("public.index") }}">Pokaż wszystkie wpisy</a>
         </div>
-        <p class="hint">Najedź na wpis, żeby zobaczyć podgląd.</p>
-      </aside>
-    {% endif %}
+      {% endif %}
+
+      {% set filter_kwargs = {} %}
+      {% if active_branch %}{% set _ = filter_kwargs.update({"branza": active_branch}) %}{% endif %}
+      {% if active_kind %}{% set _ = filter_kwargs.update({"typ": active_kind}) %}{% endif %}
+      {{ post_list(pagination, "public.index", filter_kwargs, active_branch, active_kind) }}
+    </section>
   </div>
 </main>
 {% endblock %}

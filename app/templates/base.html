@@ -43,6 +43,7 @@
       </div>
       <nav class="site-nav" id="site-nav" aria-label="Główna nawigacja">
         <a href="{{ url_for('public.index') }}">Wpisy</a>
+        <a href="{{ url_for('public.case_studies') }}">Realizacje</a>
         <a href="{{ url_for('public.about') }}">O projekcie</a>
         <a href="{{ url_for('public.search') }}">Szukaj</a>
         {% if current_user.is_authenticated %}

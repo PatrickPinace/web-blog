@@ -4,12 +4,18 @@
 testujemy go też pod kątem tego, czego wstawić NIE wolno.
 """
 
+from datetime import timedelta
+
+from app.models import utcnow
 from app.utils.content import (
     add_heading_ids,
+    add_image_loading_attrs,
     first_image_url,
     pluralize_pl,
     read_time,
     strip_tags,
+    time_ago_pl,
+    was_updated_after_publish,
     wrap_tables,
 )
 
@@ -27,6 +33,84 @@ class TestReadTime:
         plain = read_time("<p>" + "slowo " * 400 + "</p>")
         marked = read_time("<p><strong>" + "slowo </strong><em>" * 400 + "</em></p>")
         assert plain == marked
+
+
+class TestTimeAgoPl:
+    def test_just_now_for_recent(self):
+        assert time_ago_pl(utcnow()) == "przed chwilą"
+
+    def test_days_ago(self):
+        dt = utcnow() - timedelta(days=3)
+        assert time_ago_pl(dt) == "3 dni temu"
+
+    def test_one_day_uses_singular(self):
+        dt = utcnow() - timedelta(days=1, hours=1)
+        assert time_ago_pl(dt) == "1 dzień temu"
+
+    def test_months_ago(self):
+        dt = utcnow() - timedelta(days=65)
+        assert time_ago_pl(dt) == "2 miesiące temu"
+
+    def test_years_ago(self):
+        dt = utcnow() - timedelta(days=400)
+        assert time_ago_pl(dt) == "1 rok temu"
+
+    def test_naive_datetime_treated_as_utc(self):
+        dt = (utcnow() - timedelta(days=5)).replace(tzinfo=None)
+        assert time_ago_pl(dt) == "5 dni temu"
+
+
+class _FakePost:
+    def __init__(self, published_at, updated_at):
+        self.published_at = published_at
+        self.updated_at = updated_at
+
+
+class TestWasUpdatedAfterPublish:
+    def test_false_when_never_published(self):
+        assert was_updated_after_publish(_FakePost(None, utcnow())) is False
+
+    def test_false_for_microsecond_gap_between_the_two_utcnow_calls(self):
+        published = utcnow()
+        updated = published + timedelta(microseconds=500)
+        assert was_updated_after_publish(_FakePost(published, updated)) is False
+
+    def test_true_for_real_edit_later(self):
+        published = utcnow() - timedelta(days=3)
+        updated = utcnow()
+        assert was_updated_after_publish(_FakePost(published, updated)) is True
+
+    def test_handles_naive_datetimes_from_sqlite(self):
+        published = (utcnow() - timedelta(days=3)).replace(tzinfo=None)
+        updated = utcnow().replace(tzinfo=None)
+        assert was_updated_after_publish(_FakePost(published, updated)) is True
+
+
+class TestAddImageLoadingAttrs:
+    def test_adds_loading_and_decoding(self):
+        html = '<img src="a.jpg" alt="x">'
+        result = add_image_loading_attrs(html)
+        assert 'loading="lazy"' in result
+        assert 'decoding="async"' in result
+        assert 'src="a.jpg"' in result
+
+    def test_preserves_self_closing_slash(self):
+        html = '<img src="a.jpg"/>'
+        result = add_image_loading_attrs(html)
+        assert result.endswith('loading="lazy" decoding="async"/>')
+
+    def test_multiple_images_all_get_attrs(self):
+        html = '<img src="a.jpg"><p>tekst</p><img src="b.jpg">'
+        result = add_image_loading_attrs(html)
+        assert result.count('loading="lazy"') == 2
+
+    def test_empty_or_none_returns_unchanged(self):
+        assert add_image_loading_attrs("") == ""
+        assert add_image_loading_attrs(None) is None
+
+    def test_no_image_returns_unchanged(self):
+        html = "<p>bez obrazka</p>"
+        assert add_image_loading_attrs(html) == html
 
 
 class TestFirstImageUrl:

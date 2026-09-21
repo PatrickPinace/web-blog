@@ -12,10 +12,13 @@
 {% block twitter_card %}{{ 'summary_large_image' if og_image_url else 'summary' }}{% endblock %}
 
 {% block content %}
-<main class="wrap" style="padding-bottom:140px">
+<main class="wrap" style="padding-bottom:140px" data-preview-main>
 
   {% if is_preview %}
-    <p class="preview-banner"><strong>Podgląd</strong> — ten wpis nie jest jeszcze opublikowany.</p>
+    <div class="preview-banner">
+      <p><strong>Podgląd</strong> — ten wpis nie jest jeszcze opublikowany.</p>
+      <button type="button" class="preview-mobile-toggle" data-preview-mobile-toggle>Widok mobilny</button>
+    </div>
   {% endif %}
 
   <header class="post-header">
@@ -38,6 +41,10 @@
       <span class="read">{{ post.body_html | read_time }} min</span>
       <span class="sep"></span>
       <span class="views">{{ post.views_count }} {{ pluralize_pl(post.views_count, 'wyświetlenie', 'wyświetlenia', 'wyświetleń') }}</span>
+      {% if post.kind == 'notatka' and was_updated_after_publish %}
+        <span class="sep"></span>
+        <span class="updated">Zaktualizowano {{ post.updated_at | time_ago_pl }}</span>
+      {% endif %}
       {% if post.branch %}<span class="sep"></span><span class="branch">{{ post.branch }}</span>{% endif %}
     </div>
     <h1>{{ post.title }}</h1>
@@ -137,4 +144,10 @@
     </div>
   </div>
 </main>
+{% endblock %}
+
+{% block scripts %}
+{% if is_preview %}
+<script src="{{ url_for('static', filename='js/admin-preview-mobile.js') }}"></script>
+{% endif %}
 {% endblock %}

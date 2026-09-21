@@ -1,0 +1,37 @@
+{% extends "base.html" %}
+{% from "public/_post_list.html" import post_row %}
+
+{% block title %}Realizacje — {{ config.BLOG_TITLE }}{% endblock %}
+{% block description %}Realizacje pogrupowane po branży klienta — zobacz podobny projekt do Twojego.{% endblock %}
+
+{% block content %}
+<main class="wrap" style="padding-bottom:140px">
+  <div class="home-content">
+    <section class="hero">
+      <span class="hero-kicker reveal">Realizacje</span>
+      <h1 class="reveal">Zobacz projekt podobny do Twojego.</h1>
+      <p class="reveal">Realizacje pogrupowane po branży klienta. Część wpisów jest koncepcyjna — powstała jako przykład rozwiązania, nie jako sprawozdanie z płatnego zlecenia; każdy taki wpis ma to jasno napisane przy tytule.</p>
+    </section>
+
+    {% if branch_groups %}
+      {% for branch, posts in branch_groups %}
+        <section class="latest-posts reveal" aria-labelledby="branch-{{ loop.index }}-title">
+          <div class="index-head">
+            <h2 id="branch-{{ loop.index }}-title">{{ branch }}</h2>
+          </div>
+          <ol class="post-index">
+            {% for post in posts %}
+              {{ post_row(post) }}
+            {% endfor %}
+          </ol>
+        </section>
+      {% endfor %}
+    {% else %}
+      <div class="empty">
+        <p>Nie ma jeszcze opublikowanych realizacji. Wróć tu wkrótce albo zajrzyj na stronę projektu.</p>
+        <a href="{{ url_for("public.about") }}">O projekcie</a>
+      </div>
+    {% endif %}
+  </div>
+</main>
+{% endblock %}

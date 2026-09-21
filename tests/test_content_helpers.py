@@ -4,7 +4,14 @@
 testujemy go też pod kątem tego, czego wstawić NIE wolno.
 """
 
-from app.utils.content import add_heading_ids, pluralize_pl, read_time, strip_tags
+from app.utils.content import (
+    add_heading_ids,
+    first_image_url,
+    pluralize_pl,
+    read_time,
+    strip_tags,
+    wrap_tables,
+)
 
 
 class TestReadTime:
@@ -20,6 +27,19 @@ class TestReadTime:
         plain = read_time("<p>" + "slowo " * 400 + "</p>")
         marked = read_time("<p><strong>" + "slowo </strong><em>" * 400 + "</em></p>")
         assert plain == marked
+
+
+class TestFirstImageUrl:
+    def test_finds_src_of_first_image(self):
+        html = '<p>tekst</p><img src="https://example.com/a.jpg" alt=""><img src="https://example.com/b.jpg">'
+        assert first_image_url(html) == "https://example.com/a.jpg"
+
+    def test_no_image_returns_none(self):
+        assert first_image_url("<p>bez obrazka</p>") is None
+
+    def test_empty_or_none_returns_none(self):
+        assert first_image_url("") is None
+        assert first_image_url(None) is None
 
 
 class TestPluralizePl:
@@ -101,3 +121,8 @@ class TestHeadingIds:
 
 def test_strip_tags_collapses_whitespace():
     assert strip_tags("<p>a</p>\n<p>  b  </p>") == "a b"
+
+
+def test_wrap_tables_keeps_table_inside_local_scroll_container():
+    html = wrap_tables("<p>Wstęp</p><table><tr><td>x</td></tr></table>")
+    assert html == '<p>Wstęp</p><div class="table-wrapper"><table><tr><td>x</td></tr></table></div>'

@@ -3,16 +3,19 @@ tagów — reguły dodane, żeby indeks realizacji nie rozjeżdżał się przy d
 liczbie wpisów (patrz app/public/queries.py: TOP_TAGS_LIMIT).
 """
 from app.models import Post, Tag
-from app.public.queries import get_branches, get_top_tags
+from app.public.queries import get_top_tags
 from app.utils.slugify import slugify
 
 
-def _publish(db, admin, title, branch=None, tags=None):
+def _publish(db, admin, title, branch=None, tags=None, status=Post.STATUS_PUBLISHED):
     post = Post(
         title=title, slug=slugify(title), branch=branch,
         body_source="", body_html="", author_id=admin.id,
     )
-    post.publish()
+    if status == Post.STATUS_PUBLISHED:
+        post.publish()
+    else:
+        post.status = status
     if tags:
         post.tags = [
             Tag.query.filter_by(name=t).first() or Tag(name=t, slug=slugify(t))
@@ -21,31 +24,6 @@ def _publish(db, admin, title, branch=None, tags=None):
     db.session.add(post)
     db.session.commit()
     return post
-
-
-class TestGetBranches:
-    def test_groups_and_counts_by_branch(self, db, admin):
-        _publish(db, admin, "A", branch="gastronomia")
-        _publish(db, admin, "B", branch="gastronomia")
-        _publish(db, admin, "C", branch="edukacja")
-
-        branches = get_branches()
-        assert {b["name"]: b["count"] for b in branches} == {
-            "gastronomia": 2, "edukacja": 1,
-        }
-
-    def test_posts_without_branch_are_excluded(self, db, admin):
-        _publish(db, admin, "Bez branży", branch=None)
-        assert get_branches() == []
-
-    def test_draft_posts_are_not_counted(self, db, admin):
-        draft = Post(
-            title="Szkic", slug="szkic", branch="gastronomia",
-            body_source="", body_html="", author_id=admin.id,
-        )
-        db.session.add(draft)
-        db.session.commit()
-        assert get_branches() == []
 
 
 class TestGetTopTags:
@@ -107,17 +85,86 @@ class TestIndexBranchFilter:
         body = response.get_data(as_text=True)
         assert "A" in body and "B" in body
 
-    def test_branch_switcher_hidden_when_only_one_branch(self, client, db, admin):
-        _publish(db, admin, "A", branch="gastronomia")
-        _publish(db, admin, "B", branch="gastronomia")
-        response = client.get("/")
-        assert "filters--branch" not in response.get_data(as_text=True)
-
-    def test_branch_switcher_shown_with_multiple_branches(self, client, db, admin):
+    def test_branch_switcher_lists_only_branches_with_published_posts(self, client, db, admin):
         _publish(db, admin, "A", branch="gastronomia")
         _publish(db, admin, "B", branch="edukacja")
+        draft = _publish(db, admin, "Szkic", branch="tylko-szkic", status=Post.STATUS_DRAFT)
         response = client.get("/")
-        assert "filters--branch" in response.get_data(as_text=True)
+        body = response.get_data(as_text=True)
+        assert "gastronomia" in body
+        assert "edukacja" in body
+        assert "tylko-szkic" not in body
+
+    def test_branch_filter_shows_notice_and_return_link(self, client, db, admin):
+        _publish(db, admin, "A", branch="gastronomia")
+        body = client.get("/?branza=gastronomia").get_data(as_text=True)
+        assert "Wpisy dla branży: gastronomia" in body
+        assert "Pokaż wszystkie wpisy" in body
+
+
+def _publish_kind(db, admin, title, kind, status=Post.STATUS_PUBLISHED):
+    post = Post(
+        title=title, slug=slugify(title), kind=kind,
+        body_source="", body_html="", author_id=admin.id,
+    )
+    if status == Post.STATUS_PUBLISHED:
+        post.publish()
+    else:
+        post.status = status
+    db.session.add(post)
+    db.session.commit()
+    return post
+
+
+class TestIndexKindFilter:
+    def test_filters_posts_by_kind(self, client, db, admin):
+        _publish_kind(db, admin, "Felieton", Post.KIND_ESSAY)
+        _publish_kind(db, admin, "Notatka", Post.KIND_NOTE)
+
+        response = client.get("/?typ=felieton")
+        body = response.get_data(as_text=True)
+        assert "Felieton" in body
+        assert "Notatka" not in body
+
+    def test_unknown_kind_is_ignored_not_error(self, client, db, admin):
+        _publish_kind(db, admin, "Coś", Post.KIND_NOTE)
+        response = client.get("/?typ=nieistniejacy")
+        assert response.status_code == 200
+        assert "Coś" in response.get_data(as_text=True)
+
+    def test_kind_and_branch_filters_combine(self, client, db, admin):
+        post = Post(
+            title="Realizacja sportowa", slug="realizacja-sportowa",
+            kind=Post.KIND_CASE_STUDY, branch="sport",
+            body_source="", body_html="", author_id=admin.id,
+        )
+        post.publish()
+        db.session.add(post)
+        other = Post(
+            title="Notatka sportowa", slug="notatka-sportowa",
+            kind=Post.KIND_NOTE, branch="sport",
+            body_source="", body_html="", author_id=admin.id,
+        )
+        other.publish()
+        db.session.add(other)
+        db.session.commit()
+
+        body = client.get("/?typ=realizacja&branza=sport").get_data(as_text=True)
+        assert "Realizacja sportowa" in body
+        assert "Notatka sportowa" not in body
+
+    def test_kind_switcher_lists_counts_and_excludes_drafts(self, client, db, admin):
+        _publish_kind(db, admin, "F1", Post.KIND_ESSAY)
+        _publish_kind(db, admin, "F2", Post.KIND_ESSAY)
+        _publish_kind(db, admin, "Szkic", Post.KIND_ESSAY, status=Post.STATUS_DRAFT)
+        body = client.get("/").get_data(as_text=True)
+        assert "felieton (2)" in body
+
+    def test_kind_filter_shows_notice_and_return_link(self, client, db, admin):
+        _publish_kind(db, admin, "Coś", Post.KIND_NOTE)
+        body = client.get("/?typ=notatka").get_data(as_text=True)
+        assert "Wpisy: notatka" in body
+        assert "Pokaż wszystkie wpisy" in body
 
 
 class TestTagDetailKeepsSelectedTagVisible:

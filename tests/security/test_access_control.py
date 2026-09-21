@@ -86,6 +86,12 @@ class TestDraftVisibility:
         response = client.get("/feed.xml")
         assert b"Sekret" not in response.data
 
+    def test_draft_absent_from_sitemap(self, client, db, admin):
+        _make_post(db, admin, title="Sekret", slug="sekret", status=Post.STATUS_DRAFT)
+        response = client.get("/sitemap.xml")
+        assert b"Sekret" not in response.data
+        assert b"/post/sekret" not in response.data
+
     def test_draft_hidden_from_tag_view(self, client, db, admin):
         from app.models import Tag
 

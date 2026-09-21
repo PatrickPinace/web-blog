@@ -22,16 +22,31 @@ class Config:
     )
 
     BLOG_TITLE = os.environ.get("BLOG_TITLE", "Blog")
-    BLOG_DESCRIPTION = os.environ.get("BLOG_DESCRIPTION", "")
+    BLOG_DESCRIPTION = os.environ.get(
+        "BLOG_DESCRIPTION",
+        "Autorski blog o projektowaniu, programowaniu i rozwijaniu serwisu.",
+    )
     BLOG_AUTHOR = os.environ.get("BLOG_AUTHOR", "")
     BLOG_BASE_URL = os.environ.get("BLOG_BASE_URL", "http://localhost:5000")
 
-    # Linki w stopce. Puste = ikona się nie renderuje (patrz base.html) -
-    # nie chcemy martwych linków "#" wskazujących na nic.
-    BLOG_EMAIL = os.environ.get("BLOG_EMAIL", "minor.michal1@gmail.com")
-    BLOG_FACEBOOK_URL = os.environ.get("BLOG_FACEBOOK_URL", "")
-    BLOG_INSTAGRAM_URL = os.environ.get("BLOG_INSTAGRAM_URL", "")
-    BLOG_X_URL = os.environ.get("BLOG_X_URL", "")
+    # Data w stopce ("Serwis działa od..."). Statyczna, ustawiana ręcznie —
+    # bez hostingu z realnym uptime nie ma czego monitorować automatycznie.
+    BLOG_LIVE_SINCE = os.environ.get("BLOG_LIVE_SINCE", "")
+
+    # Linki w stopce. Puste wartości nie renderują odnośnika, żeby nie
+    # zostawiać martwych adresów ani domyślnych danych poprzedniego autora.
+    BLOG_EMAIL = os.environ.get("BLOG_EMAIL", "")
+    BLOG_GITHUB_URL = os.environ.get("BLOG_GITHUB_URL", "")
+    BLOG_REPOSITORY_URL = os.environ.get("BLOG_REPOSITORY_URL", "")
+    BLOG_PORTFOLIO_URL = os.environ.get("BLOG_PORTFOLIO_URL", "")
+
+    # Ręcznie utrzymywana kolejność części serii o budowie bloga. Slugi są
+    # rozdzielone przecinkami; niepubliczne pozycje są pomijane przez zapytanie.
+    BLOG_BUILD_SERIES_SLUGS = tuple(
+        slug.strip()
+        for slug in os.environ.get("BLOG_BUILD_SERIES_SLUGS", "").split(",")
+        if slug.strip()
+    )
 
     SESSION_COOKIE_HTTPONLY = True
     SESSION_COOKIE_SAMESITE = "Lax"

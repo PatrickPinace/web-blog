@@ -183,8 +183,13 @@ def get_kind_counts():
     """Liczba opublikowanych wpisów każdego typu (realizacja/notatka/felieton),
     do przełącznika na stronie głównej. Typy bez żadnego opublikowanego
     wpisu są pominięte — pusty filtr byłby ślepym zaułkiem dla czytelnika."""
+    # order_by(None) resetuje ORDER BY published_at odziedziczony z
+    # published_posts_query() — SQLite go po cichu toleruje w zapytaniu
+    # z GROUP BY, ale Postgres odrzuca (kolumna spoza GROUP BY/agregacji
+    # w ORDER BY jest błędem składniowym), patrz known-issues.
     counts = dict(
         published_posts_query()
+        .order_by(None)
         .with_entities(Post.kind, func.count(Post.id))
         .group_by(Post.kind)
         .all()

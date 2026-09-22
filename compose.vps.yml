@@ -1,0 +1,66 @@
+# Wdrożenie na współdzielonym VPS (ronim.com.pl), ten sam wzorzec co
+# my-page/compose.vps.yml: podłączenie do istniejącej zewnętrznej sieci
+# core-network zamiast publikowania portów na hosta (Caddy jest jedynym
+# reverse proxy), jawny container_name i jawna nazwa projektu `name:` —
+# inaczej Compose nazywa projekt po katalogu roboczym i różne projekty
+# na tym samym hoście mogą sobie nawzajem kasować kontenery przy `up`
+# (patrz komentarz w my-page/compose.vps.yml, gdzie to realnie się
+# wydarzyło).
+#
+# Uruchom (na VPS, w /opt/apps/web-blog/app/):
+#   docker compose -f compose.vps.yml up -d --build
+#
+# Wymagane w .env obok tego pliku (albo w środowisku shella przed `up`):
+# SECRET_KEY, POSTGRES_PASSWORD (realne hasło, nie "blog" z docker-compose.yml
+# deweloperskiego — ta baza żyje na współdzielonym VPS-ie), CLOUDINARY_URL,
+# BLOG_BASE_URL.
+#
+# Tryb demo: dodatkowo DEMO_MODE=1 i DEMO_PASSWORD — patrz
+# docker-entrypoint.sh. Bez DEMO_MODE kontener startuje jak zwykły,
+# jednoosobowy blog.
+name: web-blog
+services:
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: web-blog-app
+    restart: unless-stopped
+    mem_limit: 256m
+    environment:
+      SECRET_KEY: ${SECRET_KEY}
+      DATABASE_URL: postgresql+psycopg://blog:${POSTGRES_PASSWORD}@db:5432/blog
+      CLOUDINARY_URL: ${CLOUDINARY_URL}
+      BLOG_TITLE: ${BLOG_TITLE:-Blog}
+      BLOG_DESCRIPTION: ${BLOG_DESCRIPTION:-}
+      BLOG_AUTHOR: ${BLOG_AUTHOR:-}
+      BLOG_BASE_URL: ${BLOG_BASE_URL}
+      DEMO_MODE: ${DEMO_MODE:-}
+      DEMO_PASSWORD: ${DEMO_PASSWORD:-}
+    depends_on:
+      - db
+    networks:
+      - core-network
+    expose:
+      - "8000"
+
+  db:
+    image: postgres:16
+    container_name: web-blog-db
+    restart: unless-stopped
+    mem_limit: 128m
+    environment:
+      POSTGRES_USER: blog
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: blog
+    volumes:
+      - blog-db-data:/var/lib/postgresql/data
+    networks:
+      - core-network
+
+volumes:
+  blog-db-data:
+
+networks:
+  core-network:
+    external: true

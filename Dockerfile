@@ -15,6 +15,7 @@ COPY requirements.txt .
 RUN pip install -r requirements.txt
 
 COPY . .
+RUN chmod +x docker-entrypoint.sh
 
 # Bez rootowego użytkownika w kontenerze produkcyjnym.
 RUN useradd --create-home --uid 1000 appuser \
@@ -26,4 +27,7 @@ EXPOSE 8000
 # Migracje przy starcie kontenera, potem gunicorn. Bezpieczne przy wielu
 # instancjach na raz — Alembic blokuje tabelę wersji na czas migracji
 # (na Koyeb free tier jest jedna instancja, więc i tak bez znaczenia).
-CMD ["sh", "-c", "flask db upgrade && gunicorn --bind 0.0.0.0:8000 --workers 2 --access-logfile - --error-logfile - wsgi:app"]
+# Tryb demo (DEMO_MODE=1, patrz docker-entrypoint.sh) dokłada konto demo
+# i cykliczny reset bazy — zwykły deploy (bez tej zmiennej) zachowuje się
+# dokładnie jak wcześniej.
+CMD ["./docker-entrypoint.sh"]

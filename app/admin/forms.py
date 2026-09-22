@@ -1,3 +1,4 @@
+from flask_login import current_user
 from flask_wtf import FlaskForm
 from wtforms import (
     BooleanField,
@@ -11,6 +12,7 @@ from wtforms import (
 )
 from wtforms.validators import DataRequired, Length, Optional, ValidationError
 
+from app.demo import contains_profanity
 from app.models import Label, Post, utcnow
 
 
@@ -93,6 +95,16 @@ class PostForm(FlaskForm):
         naive_now = utcnow().replace(tzinfo=None)
         if field.data <= naive_now:
             raise ValidationError("Data publikacji musi być w przyszłości.")
+
+    def validate_body_source(self, field):
+        # Tylko dla konta demo (patrz app/demo.py) — reset co godzinę i tak
+        # sprząta bazę, ten check skraca czas ekspozycji z godziny do zera.
+        # Nie dotyczy właściwego admina — to nie jest ogólna moderacja treści.
+        if current_user.is_authenticated and current_user.is_demo:
+            if contains_profanity(self.title.data, self.excerpt.data, field.data):
+                raise ValidationError(
+                    "To demo — treść z wulgaryzmami nie może zostać zapisana."
+                )
 
 
 class DeletePostForm(FlaskForm):

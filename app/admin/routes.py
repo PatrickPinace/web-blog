@@ -20,6 +20,7 @@ from app.admin.forms import (
     PostStatusForm,
     RenameTagForm,
 )
+from app.demo import contains_profanity, demo_forbidden
 from app.extensions import db, limiter
 from app.models import (
     Image,
@@ -407,6 +408,7 @@ def post_restore(post_id):
 
 @admin_bp.route("/post/<int:post_id>/purge", methods=["POST"])
 @login_required
+@demo_forbidden
 def post_purge(post_id):
     """Trwałe usunięcie — dostępne TYLKO dla wpisów już w koszu, żeby nie
     dało się przypadkiem ominąć etapu pośredniego."""
@@ -448,6 +450,7 @@ def post_toggle_status(post_id):
 
 @admin_bp.route("/labels", methods=["GET", "POST"])
 @login_required
+@demo_forbidden
 def labels():
     form = LabelForm()
     if form.validate_on_submit():
@@ -487,6 +490,7 @@ def labels():
 
 @admin_bp.route("/labels/<int:label_id>/edit", methods=["POST"])
 @login_required
+@demo_forbidden
 def label_edit(label_id):
     label = Label.query.get_or_404(label_id)
     form = LabelForm()
@@ -515,6 +519,7 @@ def label_edit(label_id):
 
 @admin_bp.route("/labels/merge", methods=["POST"])
 @login_required
+@demo_forbidden
 def label_merge():
     form = MergeLabelsForm()
     if not form.validate_on_submit():
@@ -541,6 +546,7 @@ def label_merge():
 
 @admin_bp.route("/labels/<int:label_id>/delete", methods=["POST"])
 @login_required
+@demo_forbidden
 def label_delete(label_id):
     form = DeleteLabelForm()
     if not form.validate_on_submit():
@@ -574,6 +580,7 @@ def tags():
 
 @admin_bp.route("/tags/<int:tag_id>/rename", methods=["POST"])
 @login_required
+@demo_forbidden
 def tag_rename(tag_id):
     tag = Tag.query.get_or_404(tag_id)
     form = RenameTagForm()
@@ -597,6 +604,7 @@ def tag_rename(tag_id):
 
 @admin_bp.route("/tags/merge", methods=["POST"])
 @login_required
+@demo_forbidden
 def tag_merge():
     form = MergeTagsForm()
     if not form.validate_on_submit():
@@ -623,6 +631,7 @@ def tag_merge():
 
 @admin_bp.route("/tags/<int:tag_id>/delete", methods=["POST"])
 @login_required
+@demo_forbidden
 def tag_delete(tag_id):
     form = DeleteTagForm()
     if not form.validate_on_submit():
@@ -636,6 +645,7 @@ def tag_delete(tag_id):
 
 @admin_bp.route("/upload-image", methods=["POST"])
 @login_required
+@demo_forbidden
 @limiter.limit("30 per hour")
 def upload_image_endpoint():
     """Przyjmuje plik z panelu i odsyła URL z Cloudinary do wstawienia w treść."""
@@ -651,6 +661,7 @@ def upload_image_endpoint():
 
 @admin_bp.route("/embed-youtube", methods=["POST"])
 @login_required
+@demo_forbidden
 def embed_youtube_endpoint():
     """Zamienia URL filmu na placeholder embedu (iframe powstaje przy renderze)."""
     html = build_youtube_placeholder((request.form or {}).get("url", ""))

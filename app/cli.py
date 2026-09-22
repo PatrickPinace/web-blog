@@ -1,4 +1,6 @@
 import getpass
+import json
+from pathlib import Path
 
 import click
 from argon2 import PasswordHasher
@@ -8,6 +10,8 @@ from app.models import Post, Tag, User
 from app.utils.sanitize import SANITIZER_VERSION, sanitize_html
 from app.utils.slugify import slugify, unique_slug
 
+_DEMO_POSTS_FIXTURE = Path(__file__).parent / "fixtures" / "demo_posts.json"
+
 _hasher = PasswordHasher()
 
 
@@ -15,6 +19,32 @@ def register(app):
     app.cli.add_command(create_admin)
     app.cli.add_command(seed)
     app.cli.add_command(resanitize)
+    app.cli.add_command(reset_demo)
+    app.cli.add_command(create_demo_user)
+
+
+@click.command("create-demo-user")
+@click.option("--username", default="demo")
+@click.option("--password", envvar="DEMO_PASSWORD", required=True)
+def create_demo_user(username, password):
+    """Zakłada konto demo (is_demo=True) — hasło z --password albo env
+    DEMO_PASSWORD, nie promptowane: musi dać się wywołać nieinteraktywnie
+    przy starcie kontenera produkcyjnego trybu demo."""
+    existing = User.query.filter_by(username=username).first()
+    if existing is not None:
+        if not existing.is_demo:
+            click.echo(
+                f"Użytkownik '{username}' już istnieje i NIE jest kontem demo "
+                "— pomijam, żeby nie nadpisać prawdziwego admina."
+            )
+            return
+        click.echo(f"Konto demo '{username}' już istnieje.")
+        return
+
+    user = User(username=username, password_hash=_hasher.hash(password), is_demo=True)
+    db.session.add(user)
+    db.session.commit()
+    click.echo(f"Utworzono konto demo '{username}'.")
 
 
 @click.command("create-admin")
@@ -40,6 +70,55 @@ def create_admin(username):
     click.echo(f"Utworzono konto administratora '{username}'.")
 
 
+def _seed_posts():
+    """Wgrywa wpisy z app/fixtures/demo_posts.json (prawdziwa treść bloga,
+    wyeksportowana z bazy deweloperskiej) — używane zarówno przez `flask
+    seed` (development), jak i reset_demo_content() (patrz app/demo.py).
+    Zakłada pustą tabelę Post/Tag — nie sprawdza duplikatów.
+    """
+    author = User.query.first()
+    if author is None:
+        click.echo("Najpierw uruchom `flask create-admin`.")
+        return 0
+
+    posts_data = json.loads(_DEMO_POSTS_FIXTURE.read_text(encoding="utf-8"))
+    tags_cache = {}
+
+    for entry in posts_data:
+        tag_objs = []
+        for name in entry["tags"]:
+            if name not in tags_cache:
+                tag = Tag.query.filter_by(name=name).first()
+                if tag is None:
+                    tag = Tag(name=name, slug=slugify(name))
+                    db.session.add(tag)
+                tags_cache[name] = tag
+            tag_objs.append(tags_cache[name])
+
+        slug = unique_slug(
+            slugify(entry["title"]),
+            lambda s: Post.query.filter_by(slug=s).first() is not None,
+        )
+        post = Post(
+            author_id=author.id,
+            title=entry["title"],
+            slug=slug,
+            excerpt=entry["excerpt"],
+            body_source=entry["body_source"],
+            body_html=sanitize_html(entry["body_source"]),
+            sanitizer_version=SANITIZER_VERSION,
+            kind=entry["kind"],
+            branch=entry["branch"],
+            is_concept=entry["is_concept"],
+            tags=tag_objs,
+        )
+        post.publish()
+        db.session.add(post)
+
+    db.session.commit()
+    return len(posts_data)
+
+
 @click.command("seed")
 def seed():
     """Dane przykładowe do developmentu — nieprzeznaczone na produkcję."""
@@ -47,41 +126,19 @@ def seed():
         click.echo("Baza już zawiera wpisy — pomijam.")
         return
 
-    author = User.query.first()
-    if author is None:
-        click.echo("Najpierw uruchom `flask create-admin`.")
-        return
+    count = _seed_posts()
+    if count:
+        click.echo(f"Dodano {count} wpisów przykładowych.")
 
-    tag_names = ["case-study", "poradnik", "flask"]
-    tags = {}
-    for name in tag_names:
-        tag = Tag(name=name, slug=slugify(name))
-        db.session.add(tag)
-        tags[name] = tag
 
-    sample_posts = [
-        ("Czym się zajmuję", ["case-study"]),
-        ("5 kroków do dobrej strony", ["poradnik"]),
-    ]
-    for title, tag_keys in sample_posts:
-        base_slug = slugify(title)
-        slug = unique_slug(
-            base_slug,
-            lambda s: Post.query.filter_by(slug=s).first() is not None,
-        )
-        post = Post(
-            title=title,
-            slug=slug,
-            body_source="<p>Treść przykładowa.</p>",
-            body_html="<p>Treść przykładowa.</p>",
-            excerpt="Wpis przykładowy wygenerowany przez flask seed.",
-            tags=[tags[k] for k in tag_keys],
-        )
-        post.publish()
-        db.session.add(post)
+@click.command("reset-demo")
+def reset_demo():
+    """Czyści treść dodaną w trakcie demo i przywraca seed — wołane co
+    godzinę przez cron w kontenerze produkcyjnym trybu demo."""
+    from app.demo import reset_demo_content
 
-    db.session.commit()
-    click.echo(f"Dodano {len(sample_posts)} wpisów przykładowych.")
+    reset_demo_content()
+    click.echo("Demo zresetowane do stanu początkowego.")
 
 
 @click.command("resanitize")

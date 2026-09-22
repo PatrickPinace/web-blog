@@ -487,6 +487,13 @@ img{max-width:100%;display:block}
   border:1px dashed var(--accent);background:var(--accent-soft);
   font-family:var(--mono);font-size:.74rem;letter-spacing:.04em;color:var(--text);
   display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}
+
+/* Pasek na całą szerokość ekranu (nie ograniczony do .wrap jak reszta treści) —
+   ma być widoczny na każdej stronie, publicznej i w panelu, dopóki zalogowane
+   jest konto demo. Kolor ostrzegawczy (bursztyn), nie accent — to nie jest
+   informacja o sukcesie ani neutralna nawigacja, tylko zastrzeżenie. */
+.demo-banner{background:#7a5b12;color:#fff8e6;font-size:.85rem;text-align:center}
+.demo-banner .wrap{padding-top:10px;padding-bottom:10px}
 .preview-banner p{margin:0}
 .preview-mobile-toggle{font-family:var(--mono);font-size:.7rem;letter-spacing:.04em;
   color:var(--accent);background:var(--bg);border:1px solid var(--accent);border-radius:4px;

@@ -27,6 +27,16 @@
 <body class="{% block body_class %}{% endblock %}">
   <div class="progress"></div>
 
+  {% if current_user.is_authenticated and current_user.is_demo %}
+    <div class="demo-banner">
+      <div class="wrap">
+        To jest wersja demo panelu — pokazuje, co potrafi ten blog. Zmiany zapisujesz naprawdę,
+        ale wpisy i tagi wracają do stanu początkowego co godzinę. Wgrywanie obrazków i usuwanie
+        tagów/etykiet jest wyłączone.
+      </div>
+    </div>
+  {% endif %}
+
   <header class="site-header">
     <div class="wrap">
       <a class="brand" href="{{ url_for('public.index') }}">

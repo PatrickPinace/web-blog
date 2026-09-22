@@ -12,6 +12,11 @@ flask db upgrade
 
 if [ -n "$DEMO_MODE" ]; then
   flask create-demo-user
+  # Pierwszy reset od razu, nie dopiero po godzinie — inaczej świeżo
+  # postawiony kontener startuje z pustym blogiem (create-demo-user
+  # zakłada tylko konto, treść wgrywa reset-demo) i tak zostaje aż
+  # do pierwszego tyknięcia poniższej pętli.
+  flask reset-demo
   (
     while true; do
       sleep 3600

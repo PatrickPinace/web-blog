@@ -52,3 +52,24 @@ def auth_client(client, admin):
         data={"username": admin.username, "password": ADMIN_PASSWORD},
     )
     return client
+
+
+@pytest.fixture
+def demo_user(db):
+    user = User(
+        username="demo",
+        password_hash=PasswordHasher().hash(ADMIN_PASSWORD),
+        is_demo=True,
+    )
+    db.session.add(user)
+    db.session.commit()
+    return user
+
+
+@pytest.fixture
+def demo_client(client, demo_user):
+    client.post(
+        "/admin/login",
+        data={"username": demo_user.username, "password": ADMIN_PASSWORD},
+    )
+    return client

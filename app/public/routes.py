@@ -1,4 +1,12 @@
-from flask import Response, current_app, jsonify, make_response, render_template, request, url_for
+from flask import (
+    Response,
+    current_app,
+    jsonify,
+    make_response,
+    render_template,
+    request,
+    url_for,
+)
 from sqlalchemy import text
 from sqlalchemy.orm import joinedload
 
@@ -6,7 +14,6 @@ from app.extensions import db
 from app.models import Post, Tag
 from app.public import public_bp
 from app.public.feed import build_rss_feed
-from app.public.sitemap import build_sitemap
 from app.public.queries import (
     POSTS_PER_PAGE,
     VIEWED_POSTS_COOKIE,
@@ -23,6 +30,7 @@ from app.public.queries import (
     published_posts_query,
     record_view,
 )
+from app.public.sitemap import build_sitemap
 from app.utils.content import (
     add_heading_ids,
     add_image_loading_attrs,

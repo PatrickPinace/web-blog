@@ -20,7 +20,7 @@ from app.admin.forms import (
     PostStatusForm,
     RenameTagForm,
 )
-from app.demo import contains_profanity, demo_forbidden
+from app.demo import demo_forbidden
 from app.extensions import db, limiter
 from app.models import (
     Image,

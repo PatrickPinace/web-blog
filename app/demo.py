@@ -72,7 +72,15 @@ def reset_demo_content():
     (UNIQUE constraint failed), bo SQLite w tym projekcie nie ma
     AUTOINCREMENT i chętnie odda ten sam id od nowa."""
     from app.extensions import db
-    from app.models import Label, Post, PostActivity, PostRevision, Tag, post_labels, post_tags
+    from app.models import (
+        Label,
+        Post,
+        PostActivity,
+        PostRevision,
+        Tag,
+        post_labels,
+        post_tags,
+    )
 
     db.session.execute(post_tags.delete())
     db.session.execute(post_labels.delete())

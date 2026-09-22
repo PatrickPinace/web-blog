@@ -88,7 +88,7 @@ class TestIndexBranchFilter:
     def test_branch_switcher_lists_only_branches_with_published_posts(self, client, db, admin):
         _publish(db, admin, "A", branch="gastronomia")
         _publish(db, admin, "B", branch="edukacja")
-        draft = _publish(db, admin, "Szkic", branch="tylko-szkic", status=Post.STATUS_DRAFT)
+        _publish(db, admin, "Szkic", branch="tylko-szkic", status=Post.STATUS_DRAFT)
         response = client.get("/")
         body = response.get_data(as_text=True)
         assert "gastronomia" in body

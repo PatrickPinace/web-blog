@@ -27,6 +27,11 @@ class User(UserMixin, db.Model):
     username = db.Column(db.String(80), unique=True, nullable=False, index=True)
     password_hash = db.Column(db.String(255), nullable=False)
     created_at = db.Column(db.DateTime(timezone=True), default=utcnow, nullable=False)
+    # Konto pokazowe dla odwiedzających (bez logowania jako właściwy admin).
+    # Może edytować/publikować wpisy, ale nie wgrywać obrazków (Cloudinary
+    # nie resetuje się razem z bazą) ani niszczyć struktury (tagi, etykiety,
+    # trwałe usuwanie) — patrz @demo_forbidden w app/admin/routes.py.
+    is_demo = db.Column(db.Boolean, default=False, nullable=False, server_default="false")
 
     posts = db.relationship("Post", back_populates="author")
 

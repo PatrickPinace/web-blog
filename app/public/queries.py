@@ -200,10 +200,15 @@ def get_kind_counts():
 def get_branches():
     """Branże z co najmniej jednym opublikowanym wpisem, alfabetycznie,
     do przełącznika na stronie głównej (patrz get_kind_counts — sama zasada)."""
+    # order_by(None) resetuje ORDER BY published_at odziedziczony z
+    # published_posts_query() — .order_by(Post.branch) niżej go DOKŁADA,
+    # nie zastępuje. SELECT DISTINCT w Postgresie wymaga, żeby każda
+    # kolumna ORDER BY była w SELECT list — published_at nią nie jest.
     return [
         branch
         for branch, in (
             published_posts_query()
+            .order_by(None)
             .filter(Post.branch.isnot(None))
             .with_entities(Post.branch)
             .distinct()

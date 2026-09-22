@@ -7,6 +7,13 @@
 <main class="wrap">
   <div class="admin">
     <h1>Panel administracyjny</h1>
+    {% if config.DEMO_MODE %}
+      <p class="demo-login-hint">
+        To wersja demo — zaloguj się jako <strong>{{ config.DEMO_USERNAME }}</strong>
+        {% if config.DEMO_PASSWORD_HINT %}z hasłem <strong>{{ config.DEMO_PASSWORD_HINT }}</strong>{% endif %},
+        żeby zobaczyć panel w akcji.
+      </p>
+    {% endif %}
     <form method="post" novalidate>
       {{ form.hidden_tag() }}
       {{ form.username.label }}

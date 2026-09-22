@@ -51,6 +51,16 @@ class Config:
     SESSION_COOKIE_HTTPONLY = True
     SESSION_COOKIE_SAMESITE = "Lax"
 
+    # Widoczne w kodzie strony logowania, gdy aktywne (patrz
+    # app/admin/routes.py::login) — to konto pokazowe, nie tajemnica;
+    # ktoś testujący demo ma wiedzieć, jak się zalogować, bez pytania
+    # o dane dostępowe osobno. DEMO_USERNAME musi zgadzać się z tym, co
+    # `flask create-demo-user --username` faktycznie zakłada (domyślnie
+    # "demo" po obu stronach).
+    DEMO_MODE = bool(os.environ.get("DEMO_MODE"))
+    DEMO_USERNAME = os.environ.get("DEMO_USERNAME", "demo")
+    DEMO_PASSWORD_HINT = os.environ.get("DEMO_PASSWORD", "")
+
 
 class DevConfig(Config):
     DEBUG = True

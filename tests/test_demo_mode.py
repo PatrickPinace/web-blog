@@ -231,3 +231,22 @@ class TestResetDemoContent:
         reset_demo_content()
         assert User.query.filter_by(username=admin.username).first() is not None
         assert User.query.filter_by(username=demo_user.username).first() is not None
+
+
+class TestLoginHint:
+    """Podpowiedź danych demo na /admin/login — widoczna tylko gdy
+    DEMO_MODE aktywne, żeby ktoś testujący link nie musiał pytać o dostęp."""
+
+    def test_hint_hidden_by_default(self, client, app):
+        assert app.config["DEMO_MODE"] is False
+        response = client.get("/admin/login")
+        assert b"To wersja demo" not in response.data
+
+    def test_hint_shown_when_demo_mode_enabled(self, client, app):
+        app.config["DEMO_MODE"] = True
+        app.config["DEMO_USERNAME"] = "demo"
+        app.config["DEMO_PASSWORD_HINT"] = "haslo123"
+        response = client.get("/admin/login")
+        assert b"To wersja demo" in response.data
+        assert b"demo" in response.data
+        assert b"haslo123" in response.data

@@ -210,7 +210,8 @@ class TestResetDemoContent:
             "Superpozycja: czym jest i skąd się wzięła",
             "Co potrafi ten blog: przewodnik po funkcjach i o tym, co jest "
             "zablokowane w demo",
-            "Portal tenisowy: rezerwacje i ranking Elo zamiast arkusza i telefonu",
+            "Portal tenisowy: ranking Elo zamiast arkusza, rezerwacje na razie "
+            "w planach",
             "SubForge: napisy dopasowane po hashu pliku, nie po zgadywaniu tytułu",
         }
 

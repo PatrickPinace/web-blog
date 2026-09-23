@@ -453,6 +453,8 @@ img{max-width:100%;display:block}
   body.js-navigation .menu-toggle[aria-expanded="true"] span:nth-child(2){opacity:0}
   body.js-navigation .menu-toggle[aria-expanded="true"] span:nth-child(3){transform:translateY(-5px) rotate(-45deg)}
   .row{grid-template-columns:1fr;gap:10px;padding:22px 4px}.row .side{padding-top:0}
+  .post-index > li{border-bottom:1px solid var(--line)}
+  .post-index > li:last-child{border-bottom:none}
   .row:hover .body{transform:none}
   .prose h1{font-size:1.6rem}.prose h2{font-size:1.28rem}
   .post-nav{grid-template-columns:1fr}

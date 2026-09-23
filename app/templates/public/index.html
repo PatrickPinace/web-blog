@@ -21,7 +21,7 @@
       <a href="{{ url_for("public.post_detail", slug=series_posts[0].slug) if series_posts else url_for("public.about") }}">Przejdź do wprowadzenia &rarr;</a>
     </section>
 
-    <section class="latest-posts" aria-labelledby="latest-posts-title">
+    <section class="latest-posts" id="latest-posts" aria-labelledby="latest-posts-title">
       <div class="index-head">
         <h2 id="latest-posts-title">Najnowsze wpisy</h2>
         <a class="tags-link" href="{{ url_for("public.tags") }}">Przeglądaj tagi</a>
@@ -30,10 +30,10 @@
       {% if kind_counts %}
         <nav class="filters" aria-label="Filtruj po typie wpisu">
           <a class="{{ 'is-active' if not active_kind }}"
-             href="{{ url_for("public.index", branza=active_branch or none) }}">wszystkie</a>
+             href="{{ url_for("public.index", branza=active_branch or none) }}#latest-posts">wszystkie</a>
           {% for kind, count in kind_counts %}
             <a class="{{ 'is-active' if kind == active_kind }}"
-               href="{{ url_for("public.index", typ=kind, branza=active_branch or none) }}">{{ kind }} ({{ count }})</a>
+               href="{{ url_for("public.index", typ=kind, branza=active_branch or none) }}#latest-posts">{{ kind }} ({{ count }})</a>
           {% endfor %}
         </nav>
       {% endif %}
@@ -41,10 +41,10 @@
       {% if branches %}
         <nav class="filters" aria-label="Filtruj po branży">
           <a class="{{ 'is-active' if not active_branch }}"
-             href="{{ url_for("public.index", typ=active_kind or none) }}">wszystkie branże</a>
+             href="{{ url_for("public.index", typ=active_kind or none) }}#latest-posts">wszystkie branże</a>
           {% for branch in branches %}
             <a class="{{ 'is-active' if branch == active_branch }}"
-               href="{{ url_for("public.index", branza=branch, typ=active_kind or none) }}">{{ branch }}</a>
+               href="{{ url_for("public.index", branza=branch, typ=active_kind or none) }}#latest-posts">{{ branch }}</a>
           {% endfor %}
         </nav>
       {% endif %}

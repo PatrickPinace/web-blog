@@ -842,7 +842,7 @@ html[data-theme="dark"] .editor-shell .ql-editor code{color:#f4f7fb;background:#
 .start-here h2{margin:10px 0 0;font-size:1.55rem;letter-spacing:-.025em}
 .start-here p{margin:10px 0 0;max-width:620px;color:var(--muted);line-height:1.6}
 .start-here a{display:inline-block;margin-top:16px}
-.latest-posts{padding-top:52px}
+.latest-posts{padding-top:52px;scroll-margin-top:80px}
 .filter-notice{display:flex;align-items:baseline;justify-content:space-between;gap:18px;padding:16px 0;border-bottom:1px solid var(--line-soft)}
 .filter-notice p{margin:0;color:var(--muted)}
 .empty{padding:30px 0;color:var(--muted);line-height:1.6}.empty p{margin:0 0 10px}

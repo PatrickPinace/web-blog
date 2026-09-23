@@ -198,13 +198,14 @@ class TestResetDemoContent:
     def test_reset_restores_seed_posts(self, admin, db):
         reset_demo_content()
         posts = Post.query.all()
-        assert len(posts) == 7
+        assert len(posts) == 8
         assert {p.title for p in posts} == {
             "Czym się zajmuję",
             "5 pytań, zanim wycenisz nową stronę",
             "Kwiaciarnia: strona, która ma pokazać towar",
             "Szkoła językowa: trzy warianty, jeden wybór",
             "Klub sportowy: pokazać system, nie opisać go",
+            "BDO bez BDO: rejestrowanie odbioru odpadów bez zgadywania statusu",
             "Jak zbudowany jest ten serwis",
             "Superpozycja: czym jest i skąd się wzięła",
         }
@@ -214,7 +215,7 @@ class TestResetDemoContent:
         drugi reset musi przejść tak samo czysto jak pierwszy."""
         reset_demo_content()
         reset_demo_content()
-        assert Post.query.count() == 7
+        assert Post.query.count() == 8
 
     def test_reset_clears_content_added_via_demo(self, demo_client, db, admin):
         _create(demo_client, title="Wpis od odwiedzającego")
@@ -223,7 +224,7 @@ class TestResetDemoContent:
         reset_demo_content()
 
         assert Post.query.filter_by(title="Wpis od odwiedzającego").first() is None
-        assert Post.query.count() == 7
+        assert Post.query.count() == 8
 
     def test_reset_preserves_user_accounts(self, admin, demo_user, db):
         from app.models import User
